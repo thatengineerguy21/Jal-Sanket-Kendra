@@ -2,6 +2,9 @@
 
 from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+from sqlalchemy.sql import func
+from sqlalchemy import DateTime, Text
+from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 # Define the database connection URL. For this example, we use a local SQLite file.
 # For production, you would replace this with your PostgreSQL connection string.
@@ -54,6 +57,35 @@ class PollutionResult(Base):
 
     # Establish the reverse relationship
     sample = relationship("WaterSample", back_populates="result")
+
+
+class User(Base):
+    """
+    Basic user model for authentication with role support.
+    Roles: 'Admin', 'Analyst', 'Viewer'.
+    """
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    role = Column(String, default="Viewer", nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class AlertConfig(Base):
+    """
+    Stores alert configuration such as thresholds and routing policies.
+    Keys for providers are read from environment variables, not stored.
+    """
+    __tablename__ = "alert_configs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    hpi_threshold = Column(Float, default=100.0)
+    cd_threshold = Column(Float, default=3.0)
+    email_recipients = Column(Text, default="")  # comma-separated emails
+    sms_recipients = Column(Text, default="")    # comma-separated phone numbers
+    policy_json = Column(Text, default="{}")     # optional JSON string for region policies
 
 
 def get_db():

@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* === Global Theme Variables === */
+:root {
+  --bg-from: #0f172a; /* slate-950 */
+  --bg-via: #1e293b; /* slate-900 */
+  --bg-to: #1e293b;   /* slate-800 */
+  --text-color: #e2e8f0; /* slate-100 */
+}
+
+/* === Global Body Styling === */
+body {
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  background: linear-gradient(to bottom right,
+    var(--bg-from),
+    var(--bg-via),
+    var(--bg-to)
+  );
+  color: var(--text-color);
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, sans-serif;
+}
+
+/* === Custom Scrollbar (for tables & panels) === */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e293b; /* slate-900 */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #475569; /* slate-700 */
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b; /* slate-500 */
+}

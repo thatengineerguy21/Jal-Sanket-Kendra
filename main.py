@@ -2,6 +2,7 @@
 
 from fastapi import FastAPI
 from app import api
+from fastapi.staticfiles import StaticFiles
 
 # This line has been removed to prevent conflicts with the test database setup.
 # models.Base.metadata.create_all(bind=engine)
@@ -16,6 +17,9 @@ app = FastAPI(
 # Include the router from app/api.py
 app.include_router(api.router, prefix="/api/v1", tags=["Pollution Indices"])
 
+# Mount static frontend at /app
+app.mount("/app", StaticFiles(directory="frontend/static", html=True), name="frontend")
+
 @app.get("/", tags=["Root"])
 def read_root():
     """
@@ -23,5 +27,6 @@ def read_root():
     """
     return {
         "message": "Welcome to the Heavy Metal Pollution Indices API",
-        "docs_url": "/docs"
+        "docs_url": "/docs",
+        "app_url": "/app/"
     }
