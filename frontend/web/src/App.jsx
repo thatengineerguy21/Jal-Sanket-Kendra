@@ -13,19 +13,28 @@ function NavBar() {
       <div className="text-lg font-bold tracking-wide text-cyan-400">
         Heavy Metal Pollution Dashboard
       </div>
-      <nav className="flex items-center gap-6">
-        <Link to="/data" className="hover:text-cyan-300 transition">
+      <nav className="flex items-center gap-4">
+        <Link
+          to="/data"
+          className="px-3 py-2 rounded-md hover:bg-slate-800 hover:text-cyan-300 transition"
+        >
           Data
         </Link>
-        <Link to="/map" className="hover:text-cyan-300 transition">
+        <Link
+          to="/map"
+          className="px-3 py-2 rounded-md hover:bg-slate-800 hover:text-cyan-300 transition"
+        >
           Map
         </Link>
-        <Link to="/predict" className="hover:text-cyan-300 transition">
+        <Link
+          to="/predict"
+          className="px-3 py-2 rounded-md hover:bg-slate-800 hover:text-cyan-300 transition"
+        >
           Predict
         </Link>
         <button
-          className="px-3 py-1 rounded-md bg-cyan-600 hover:bg-cyan-500 text-white font-medium transition"
           onClick={() => nav('/')}
+          className="px-3 py-2 rounded-md bg-cyan-600 hover:bg-cyan-500 text-white font-medium transition"
         >
           Home
         </button>

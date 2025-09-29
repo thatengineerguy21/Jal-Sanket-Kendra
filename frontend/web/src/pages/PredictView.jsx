@@ -116,18 +116,37 @@ export default function PredictView({ preds, setPreds }) {
       {error && <div className="text-red-300 text-sm mt-2">{error}</div>}
       {message && <div className="text-green-300 text-sm mt-2">{message}</div>}
 
-      <div className="mt-6 text-sm text-slate-300 rounded-lg border border-slate-700 divide-y divide-slate-800">
-        {(preds || []).slice(0, 10).map((p, i) => (
-          <div key={i} className="grid grid-cols-4 gap-2 px-4 py-2">
-            <div>{p.latitude}</div>
-            <div>{p.longitude}</div>
-            <div>{p.risk_score}</div>
-            <div>{p.risk_category}</div>
-          </div>
-        ))}
-        {preds?.length === 0 && (
-          <div className="px-4 py-3 text-slate-400">No predictions yet.</div>
-        )}
+      <div className="mt-6 overflow-auto rounded-lg shadow-lg border border-slate-700">
+        <table className="min-w-full text-sm text-slate-200">
+          <thead className="bg-slate-800 text-cyan-300 uppercase text-xs tracking-wide">
+            <tr>
+              <th className="px-4 py-3 text-left">Latitude</th>
+              <th className="px-4 py-3 text-left">Longitude</th>
+              <th className="px-4 py-3 text-left">Risk Score</th>
+              <th className="px-4 py-3 text-left">Risk Category</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(preds || []).map((p, i) => (
+              <tr key={i} className={i % 2 === 0 ? 'bg-slate-900' : 'bg-slate-800'}>
+                <td className="px-4 py-2">{p.latitude}</td>
+                <td className="px-4 py-2">{p.longitude}</td>
+                <td className="px-4 py-2">{p.risk_score}</td>
+                <td className="px-4 py-2">{p.risk_category}</td>
+              </tr>
+            ))}
+            {preds?.length === 0 && (
+              <tr>
+                <td
+                  colSpan="4"
+                  className="px-4 py-3 text-slate-400 text-center"
+                >
+                  No predictions yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   )
