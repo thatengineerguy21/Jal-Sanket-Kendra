@@ -4,7 +4,7 @@ A small FastAPI application to calculate water quality indices (Heavy Metal Poll
 
 ---
 
-## Quick overview 
+## Quick overview
 
 - API built with **FastAPI** (see `main.py`).
 - Calculation logic in `app/calculator.py`.
@@ -13,7 +13,7 @@ A small FastAPI application to calculate water quality indices (Heavy Metal Poll
 
 ---
 
-## Prerequisites 
+## Prerequisites
 
 - Python 3.14 or newer
 - Java Runtime (JRE/JDK) on PATH, required for parsing PDFs with `tabula`.
@@ -21,7 +21,7 @@ A small FastAPI application to calculate water quality indices (Heavy Metal Poll
 
 ---
 
-## Install & run (pip users) 
+## Install & run (pip users)
 
 Open PowerShell in the project root (this folder) and run:
 
@@ -32,7 +32,6 @@ python -m venv .venv
 
 # Install the package in editable mode and extra tools
 pip install -e .
-pip install "uvicorn[standard]"
 ```
 
 Initialize the database tables (run from project root):
@@ -88,7 +87,7 @@ Then re-run:
 
 ---
 
-## Install & run (uv users) 
+## Install & run (uv users)
 
 This repository also supports workflows using the `uv` tool (used for dependency/manage/run in some environments). Example commands:
 
@@ -96,11 +95,14 @@ This repository also supports workflows using the `uv` tool (used for dependency
 # Initialize uv meta files (if not already present)
 uv init
 
-# Add required runtime deps (example)
-uv add python-multipart
-uv add "uvicorn[standard]"
-uv add pandas
-uv add tabula
+# Install dependencies using sync
+uv sync
+
+# Activate venv(Required)
+.\.venv\Scripts\Activate.ps1
+
+# Initialize Database Tables
+python -c "from app import models; models.Base.metadata.create_all(models.engine)"
 
 # If `uv` exposes a run command you can use it, otherwise use the uvicorn command below this
 # Example (if your `uv` supports `uv run`):
@@ -114,7 +116,7 @@ Note: `uv` commands and flags depend on the `uv` implementation you have. The ab
 
 ---
 
-## Uploading data & endpoints 
+## Uploading data & endpoints
 
 - Upload & calculate: `POST /api/v1/upload-and-calculate/` (CSV/JSON/PDF/Excel)
 - Predict hotspots: `POST /api/v1/predict-hotspots/`
@@ -131,7 +133,7 @@ Required columns for upload: `latitude`, `longitude`, `arsenic`, `cadmium`, `lea
 
 ---
 
-## Environment & extras 
+## Environment & extras
 
 - To enable alert sending via email or SMS, set these environment variables:
   - `SENDGRID_API_KEY`
@@ -139,7 +141,8 @@ Required columns for upload: `latitude`, `longitude`, `arsenic`, `cadmium`, `lea
   - `TWILIO_AUTH_TOKEN`
 
 ---
-## Troubleshooting & tips 
+
+## Troubleshooting & tips
 
 - If PDF parsing fails, verify Java is installed and `java` is on your PATH.
 - If you see parsing errors from `tabula`, try converting the PDF tables to CSV first and re-upload.
@@ -153,9 +156,9 @@ Two helper scripts are included in `scripts/` to make getting started easier. Ru
 
 - PowerShell: `scripts/start.ps1` — creates/activates `.venv`, installs dependencies (unless `-NoInstall` is passed), initializes the DB, and starts the server.
 
-  Example: `.\	ools\..\scripts\start.ps1` (or `.\ackslash\scripts\start.ps1`) — Note: run `.\	ools\..\scripts\start.ps1` from PowerShell in the project root.
+  Example: `.\scripts\start.ps1`  — Note: run `.\	ools\..\scripts\start.ps1` from PowerShell in the project root.
 
-  Usage: `.\	ools\..\scripts\start.ps1` or `.\scripts\start.ps1 -Port 8080 -NoInstall`
+  Usage: `.\scripts\start.ps1` or `.\scripts\start.ps1 -Port 8080 -NoInstall`
 
 - Bash: `scripts/start.sh` — same behavior for Unix-like systems. Make it executable and run:
 
@@ -165,6 +168,7 @@ Two helper scripts are included in `scripts/` to make getting started easier. Ru
   ```
 
 Both scripts will:
+
 - create a Python virtual environment (`.venv`) if missing
 - install dependencies with `pip install -e .` (skippable)
 - initialize the SQLite DB tables
@@ -172,7 +176,7 @@ Both scripts will:
 
 ---
 
-## Test datasets & how to use them 
+## Test datasets & how to use them
 
 A sample test dataset is included at `data/test_data.csv`. It contains example water-sample rows used for manual testing and as a reference for automated tests.
 
@@ -186,6 +190,7 @@ Required attributes (columns) for any test dataset:
 - `zinc` (float)
 
 Notes:
+
 - Column headers are case-sensitive in the code but the upload endpoint strips surrounding spaces from headers; ensure the exact names above are present.
 - Numeric values should be valid numbers. Missing values are treated as NaN and excluded from calculations for that metal.
 - Supported file formats for uploads: CSV, JSON (array of objects), PDF (table), and Excel (`.xlsx`).
