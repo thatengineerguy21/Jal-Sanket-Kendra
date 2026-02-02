@@ -52,6 +52,40 @@ Visit:
 - Frontend: http://127.0.0.1:8000/app/
 - API docs (Swagger): http://127.0.0.1:8000/docs
 
+
+### Important: Use the project's `.venv` (Windows PowerShell)
+
+If you created the project's virtual environment with `uv sync` or `python -m venv .venv`, make sure you're running commands with the project venv's Python. A common error is `ModuleNotFoundError: No module named 'sqlalchemy'` when your shell `python` is the system interpreter instead of `.venv`.
+
+Quick commands (run from project root):
+
+```powershell
+# Activate the venv in PowerShell (may require temporary policy change):
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+
+# Or run commands directly with the venv Python without activating:
+& .\.venv\Scripts\python.exe -V
+& .\.venv\Scripts\python.exe -c "from app import models; models.Base.metadata.create_all(models.engine)"
+& .\.venv\Scripts\python.exe -m pip install -e .
+```
+
+### Fix for `pip install -e .` failure when setuptools finds many top-level folders
+
+If `pip install -e .` fails with a message like "Multiple top-level packages discovered in a flat-layout: ['app', 'data', 'frontend']", add an explicit package discovery config to `pyproject.toml` so setuptools only packages the intended package (`app`). Add this snippet to `pyproject.toml`:
+
+```toml
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app", "app.*"]
+```
+
+Then re-run:
+
+```powershell
+& .\.venv\Scripts\python.exe -m pip install -e .
+```
+
 ---
 
 ## Install & run (uv users) 
