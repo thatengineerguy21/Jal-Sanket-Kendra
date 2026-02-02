@@ -3,7 +3,7 @@
 import pandas as pd
 import pytest
 
-from app import calculator
+from ..app import calculator
 
 # --- Test Data Fixtures ---
 

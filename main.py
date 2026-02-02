@@ -1,8 +1,11 @@
 # main.py
-
+from pathlib import Path
 from fastapi import FastAPI
 from app import api
 from fastapi.staticfiles import StaticFiles
+
+# Get Current Working Directory
+cwd = Path(__file__).parent
 
 # This line has been removed to prevent conflicts with the test database setup.
 # models.Base.metadata.create_all(bind=engine)
@@ -16,9 +19,9 @@ app = FastAPI(
 
 # Include the router from app/api.py
 app.include_router(api.router, prefix="/api/v1", tags=["Pollution Indices"])
-
 # Mount static frontend at /app
-app.mount("/app", StaticFiles(directory="frontend/static", html=True), name="frontend")
+static = cwd / "frontend" / "static"
+app.mount("/app", StaticFiles(directory=static, html=True), name="frontend")
 
 @app.get("/", tags=["Root"])
 def read_root():

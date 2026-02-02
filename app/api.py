@@ -35,7 +35,7 @@ class SampleResponse(BaseModel):
     result: CalculationResult
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 @router.post("/upload-and-calculate/", response_model=List[SampleResponse])
