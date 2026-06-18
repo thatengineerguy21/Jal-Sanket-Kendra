@@ -1,99 +1,131 @@
 # app/models.py
+"""
+SQLAlchemy ORM models and database session management.
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship
-from sqlalchemy.sql import func
-from sqlalchemy import DateTime, Text
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+Changes from v1:
+- Removed duplicate imports
+- DATABASE_URL sourced from app.config
+- Cascade delete on WaterSample → PollutionResult
+- Removed dead User model (auth was removed)
+- Added created_at / updated_at timestamps
+- Added __repr__ methods
+"""
 
-# Define the database connection URL. For this example, we use a local SQLite file.
-# For production, you would replace this with your PostgreSQL connection string.
-DATABASE_URL = "sqlite:///./water_quality.db"
+from __future__ import annotations
 
-# Create the SQLAlchemy engine
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+from datetime import datetime, timezone
 
-# SessionLocal will be the database session class
+from sqlalchemy import (
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    create_engine,
+    event,
+)
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session
+
+from app.config import settings
+
+# ── Engine & Session ────────────────────────────────────────────────────
+engine = create_engine(
+    settings.DATABASE_URL,
+    connect_args={"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {},
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Base class for our declarative models
 Base = declarative_base()
 
 
+# ── Helpers ─────────────────────────────────────────────────────────────
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+# ── Models ──────────────────────────────────────────────────────────────
 class WaterSample(Base):
-    """
-    Represents the raw data for a single water sample point.
-    """
+    """Raw data for a single water-quality sampling point."""
+
     __tablename__ = "water_samples"
 
-    id = Column(Integer, primary_key=True, index=True)
-    latitude = Column(Float, nullable=False)
-    longitude = Column(Float, nullable=False)
+    id: int = Column(Integer, primary_key=True, index=True)
+    latitude: float = Column(Float, nullable=False)
+    longitude: float = Column(Float, nullable=False)
 
     # Metal concentrations in µg/L
-    arsenic = Column(Float, name="As")
-    cadmium = Column(Float, name="Cd")
-    lead = Column(Float, name="Pb")
-    zinc = Column(Float, name="Zn")
+    arsenic: float = Column(Float, name="As")
+    cadmium: float = Column(Float, name="Cd")
+    lead: float = Column(Float, name="Pb")
+    zinc: float = Column(Float, name="Zn")
 
-    # Establish a one-to-one relationship with the results
-    result = relationship("PollutionResult", back_populates="sample", uselist=False)
+    created_at: datetime = Column(DateTime, default=_utcnow)
+    updated_at: datetime = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+    # cascade + delete-orphan so deleting a sample removes its result row.
+    result = relationship(
+        "PollutionResult",
+        back_populates="sample",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<WaterSample id={self.id} lat={self.latitude} lon={self.longitude}>"
+        )
 
 
 class PollutionResult(Base):
-    """
-    Stores the calculated pollution indices for a corresponding water sample.
-    """
+    """Calculated pollution indices for a corresponding water sample."""
+
     __tablename__ = "pollution_results"
 
-    id = Column(Integer, primary_key=True, index=True)
-    sample_id = Column(Integer, ForeignKey("water_samples.id"))
+    id: int = Column(Integer, primary_key=True, index=True)
+    sample_id: int = Column(Integer, ForeignKey("water_samples.id"), nullable=False)
 
-    heavy_metal_pollution_index = Column(Float, name="HPI")
-    hpi_category = Column(String)
+    heavy_metal_pollution_index: float = Column(Float, name="HPI")
+    hpi_category: str = Column(String)
 
-    degree_of_contamination = Column(Float, name="Cd_value")
-    cd_category = Column(String)
+    degree_of_contamination: float = Column(Float, name="Cd_value")
+    cd_category: str = Column(String)
 
-    # Establish the reverse relationship
+    created_at: datetime = Column(DateTime, default=_utcnow)
+    updated_at: datetime = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+
     sample = relationship("WaterSample", back_populates="result")
 
-
-class User(Base):
-    """
-    Basic user model for authentication with role support.
-    Roles: 'Admin', 'Analyst', 'Viewer'.
-    """
-    __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True, nullable=False)
-    password_hash = Column(String, nullable=False)
-    role = Column(String, default="Viewer", nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    def __repr__(self) -> str:
+        return (
+            f"<PollutionResult id={self.id} sample_id={self.sample_id} "
+            f"hpi={self.heavy_metal_pollution_index}>"
+        )
 
 
 class AlertConfig(Base):
-    """
-    Stores alert configuration such as thresholds and routing policies.
-    Keys for providers are read from environment variables, not stored.
-    """
+    """Alert thresholds and routing policies. Provider secrets stay in env vars."""
+
     __tablename__ = "alert_configs"
 
-    id = Column(Integer, primary_key=True, index=True)
-    hpi_threshold = Column(Float, default=100.0)
-    cd_threshold = Column(Float, default=3.0)
-    email_recipients = Column(Text, default="")  # comma-separated emails
-    sms_recipients = Column(Text, default="")    # comma-separated phone numbers
-    policy_json = Column(Text, default="{}")     # optional JSON string for region policies
+    id: int = Column(Integer, primary_key=True, index=True)
+    hpi_threshold: float = Column(Float, default=100.0)
+    cd_threshold: float = Column(Float, default=3.0)
+    email_recipients: str = Column(Text, default="")
+    sms_recipients: str = Column(Text, default="")
+    policy_json: str = Column(Text, default="{}")
+
+    def __repr__(self) -> str:
+        return (
+            f"<AlertConfig id={self.id} hpi_thr={self.hpi_threshold} "
+            f"cd_thr={self.cd_threshold}>"
+        )
 
 
+# ── Dependency ──────────────────────────────────────────────────────────
 def get_db():
-    """
-    Dependency function to get a database session for each request.
-    Ensures the session is closed after the request is finished.
-    """
-    db = SessionLocal()
+    """FastAPI dependency – yields a DB session and ensures cleanup."""
+    db: Session = SessionLocal()
     try:
         yield db
     finally:

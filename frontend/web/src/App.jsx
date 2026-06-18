@@ -1,52 +1,291 @@
-import React, { useEffect, useState } from 'react'
-import { Link, Routes, Route, useNavigate } from 'react-router-dom'
+import React, { useEffect, useState, createContext, useContext, useCallback } from 'react'
+import { Link, Routes, Route, useLocation } from 'react-router-dom'
 import DataView from './pages/DataView.jsx'
 import MapView from './pages/MapView.jsx'
 import PredictView from './pages/PredictView.jsx'
+import AlertsView from './pages/AlertsView.jsx'
 
 const API_BASE = '/api/v1'
 
-function NavBar() {
-  const nav = useNavigate()
+/* ═══════════════════════════════════════════
+   Toast Context — app-wide notification system
+   ═══════════════════════════════════════════ */
+const ToastContext = createContext()
+
+export function useToast() {
+  return useContext(ToastContext)
+}
+
+function ToastProvider({ children }) {
+  const [toasts, setToasts] = useState([])
+
+  const addToast = useCallback((message, type = 'info', duration = 4000) => {
+    const id = Date.now() + Math.random()
+    setToasts((prev) => [...prev, { id, message, type }])
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id))
+    }, duration)
+  }, [])
+
+  const icons = {
+    success: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 6L9 17l-5-5"/>
+      </svg>
+    ),
+    error: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+      </svg>
+    ),
+    info: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+      </svg>
+    ),
+  }
+
   return (
-    <header className="flex items-center justify-between px-6 py-4 border-b border-slate-700 bg-slate-900 text-slate-200 shadow-md">
-      <div className="text-lg font-bold tracking-wide text-cyan-400">
-        Heavy Metal Pollution Dashboard
+    <ToastContext.Provider value={addToast}>
+      {children}
+      <div className="toast-container" aria-live="polite">
+        {toasts.map((t) => (
+          <div key={t.id} className={`toast toast-${t.type}`} role="alert">
+            {icons[t.type]}
+            <span>{t.message}</span>
+          </div>
+        ))}
       </div>
-      <nav className="flex items-center gap-4">
-        <Link
-          to="/data"
-          className="px-3 py-2 rounded-md hover:bg-slate-800 hover:text-cyan-300 transition"
+    </ToastContext.Provider>
+  )
+}
+
+/* ═══════════════════════════════════════════
+   SVG Icons
+   ═══════════════════════════════════════════ */
+const icons = {
+  water: (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+    </svg>
+  ),
+  data: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+    </svg>
+  ),
+  map: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
+    </svg>
+  ),
+  predict: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+  ),
+  alert: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+    </svg>
+  ),
+  menu: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  ),
+  close: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+  ),
+}
+
+/* ═══════════════════════════════════════════
+   NavBar Component
+   ═══════════════════════════════════════════ */
+function NavBar() {
+  const location = useLocation()
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  const navLinks = [
+    { to: '/data', label: 'Dashboard', icon: icons.data },
+    { to: '/map', label: 'Map', icon: icons.map },
+    { to: '/predict', label: 'Predict', icon: icons.predict },
+    { to: '/alerts', label: 'Alerts', icon: icons.alert },
+  ]
+
+  const isActive = (path) => {
+    if (path === '/data') return location.pathname === '/' || location.pathname === '/data'
+    return location.pathname === path
+  }
+
+  return (
+    <header
+      className="sticky top-0 z-50"
+      style={{
+        background: 'var(--glass-bg-strong)',
+        backdropFilter: `blur(var(--glass-blur-strong))`,
+        WebkitBackdropFilter: `blur(var(--glass-blur-strong))`,
+        borderBottom: '1px solid var(--glass-border)',
+      }}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo + Brand */}
+          <Link
+            to="/"
+            className="flex items-center gap-3 group no-underline"
+            aria-label="Jal Sanket Kendra — Home"
+          >
+            <div
+              className="flex items-center justify-center w-10 h-10 rounded-xl"
+              style={{
+                background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-cyan-500))',
+                boxShadow: 'var(--shadow-glow-primary)',
+                transition: 'var(--transition-base)',
+                color: 'white',
+              }}
+            >
+              {icons.water}
+            </div>
+            <div className="flex flex-col">
+              <span
+                className="text-lg font-bold tracking-tight"
+                style={{ color: 'var(--color-text-50)', lineHeight: '1.2' }}
+              >
+                Jal Sanket Kendra
+              </span>
+              <span
+                className="text-xs font-medium"
+                style={{ color: 'var(--color-primary-300)', letterSpacing: '0.04em' }}
+              >
+                जल संकेत केंद्र
+              </span>
+            </div>
+          </Link>
+
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
+            {navLinks.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                className="relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium no-underline"
+                style={{
+                  color: isActive(link.to)
+                    ? 'var(--color-primary-300)'
+                    : 'var(--color-text-400)',
+                  background: isActive(link.to)
+                    ? 'rgba(20, 184, 166, 0.1)'
+                    : 'transparent',
+                  transition: 'var(--transition-base)',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive(link.to)) {
+                    e.currentTarget.style.color = 'var(--color-text-200)'
+                    e.currentTarget.style.background = 'rgba(148, 163, 184, 0.08)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive(link.to)) {
+                    e.currentTarget.style.color = 'var(--color-text-400)'
+                    e.currentTarget.style.background = 'transparent'
+                  }
+                }}
+                aria-current={isActive(link.to) ? 'page' : undefined}
+              >
+                {link.icon}
+                {link.label}
+                {isActive(link.to) && (
+                  <span
+                    className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full"
+                    style={{ background: 'var(--color-primary-400)' }}
+                  />
+                )}
+              </Link>
+            ))}
+          </nav>
+
+          {/* Mobile Hamburger */}
+          <button
+            className="md:hidden btn btn-ghost p-2"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileOpen}
+          >
+            {mobileOpen ? icons.close : icons.menu}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Nav Dropdown */}
+      {mobileOpen && (
+        <nav
+          className="md:hidden animate-slide-down"
+          style={{
+            borderTop: '1px solid var(--glass-border)',
+            background: 'var(--glass-bg-strong)',
+            backdropFilter: `blur(var(--glass-blur-strong))`,
+          }}
+          aria-label="Mobile navigation"
         >
-          Data
-        </Link>
-        <Link
-          to="/map"
-          className="px-3 py-2 rounded-md hover:bg-slate-800 hover:text-cyan-300 transition"
-        >
-          Map
-        </Link>
-        <Link
-          to="/predict"
-          className="px-3 py-2 rounded-md hover:bg-slate-800 hover:text-cyan-300 transition"
-        >
-          Predict
-        </Link>
-        <button
-          onClick={() => nav('/')}
-          className="px-3 py-2 rounded-md bg-cyan-600 hover:bg-cyan-500 text-white font-medium transition"
-        >
-          Home
-        </button>
-      </nav>
+          <div className="px-4 py-3 space-y-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium no-underline"
+                style={{
+                  color: isActive(link.to)
+                    ? 'var(--color-primary-300)'
+                    : 'var(--color-text-400)',
+                  background: isActive(link.to)
+                    ? 'rgba(20, 184, 166, 0.1)'
+                    : 'transparent',
+                }}
+                onClick={() => setMobileOpen(false)}
+              >
+                {link.icon}
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </nav>
+      )}
     </header>
   )
 }
 
+/* ═══════════════════════════════════════════
+   Footer Component
+   ═══════════════════════════════════════════ */
+function Footer() {
+  return (
+    <footer
+      className="mt-auto py-6 px-6 text-center text-xs"
+      style={{
+        color: 'var(--color-text-500)',
+        borderTop: '1px solid var(--glass-border)',
+      }}
+    >
+      <p className="mb-1">
+        <span style={{ color: 'var(--color-text-400)' }}>Jal Sanket Kendra</span>{' '}
+        — Water Quality Monitoring & Heavy Metal Pollution Index
+      </p>
+      <p>© {new Date().getFullYear()} All rights reserved.</p>
+    </footer>
+  )
+}
+
+/* ═══════════════════════════════════════════
+   App Component
+   ═══════════════════════════════════════════ */
 export default function App() {
   const [samples, setSamples] = useState([])
   const [preds, setPreds] = useState([])
   const [summary, setSummary] = useState(null)
+  const location = useLocation()
 
   useEffect(() => {
     fetch(`${API_BASE}/indices/`)
@@ -55,46 +294,41 @@ export default function App() {
       .catch(() => {})
   }, [samples])
 
+  // Determine if the current page is the map (full-bleed, no padding)
+  const isMapPage = location.pathname === '/map'
+
   return (
-    <div className="min-h-screen text-slate-100 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800">
-      <NavBar />
-      <main className="grid grid-cols-1 lg:grid-cols-[420px,1fr]">
-        <section className="bg-slate-900/80 backdrop-blur border-r border-slate-700 p-6">
-          <h2 className="text-cyan-300 font-semibold mb-3">Indices Summary</h2>
-          {summary ? (
-            <div className="grid grid-cols-3 gap-3 text-sm">
-              <div className="bg-slate-800 p-4 rounded shadow-sm hover:shadow-md transition">
-                Count: <b>{summary.count}</b>
-              </div>
-              <div className="bg-slate-800 p-4 rounded shadow-sm hover:shadow-md transition">
-                Avg HPI: <b>{summary.avg_hpi}</b>
-              </div>
-              <div className="bg-slate-800 p-4 rounded shadow-sm hover:shadow-md transition">
-                Avg Cd: <b>{summary.avg_cd}</b>
-              </div>
-            </div>
-          ) : (
-            <div className="text-slate-400 text-sm">No indices yet.</div>
-          )}
-        </section>
-        <section className="min-h-[calc(100vh-56px)] p-4">
-          <Routes>
-            <Route
-              path="/"
-              element={<DataView samples={samples} setSamples={setSamples} />}
-            />
-            <Route
-              path="/data"
-              element={<DataView samples={samples} setSamples={setSamples} />}
-            />
-            <Route path="/map" element={<MapView samples={samples} preds={preds} />} />
-            <Route
-              path="/predict"
-              element={<PredictView preds={preds} setPreds={setPreds} />}
-            />
-          </Routes>
-        </section>
-      </main>
-    </div>
+    <ToastProvider>
+      <div className="min-h-screen flex flex-col">
+        <NavBar />
+        <main className={`flex-1 ${isMapPage ? '' : 'max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6'}`}>
+          <div key={location.pathname} className="animate-fade-in-up">
+            <Routes>
+              <Route
+                path="/"
+                element={<DataView samples={samples} setSamples={setSamples} summary={summary} />}
+              />
+              <Route
+                path="/data"
+                element={<DataView samples={samples} setSamples={setSamples} summary={summary} />}
+              />
+              <Route
+                path="/map"
+                element={<MapView samples={samples} preds={preds} />}
+              />
+              <Route
+                path="/predict"
+                element={<PredictView preds={preds} setPreds={setPreds} />}
+              />
+              <Route
+                path="/alerts"
+                element={<AlertsView />}
+              />
+            </Routes>
+          </div>
+        </main>
+        {!isMapPage && <Footer />}
+      </div>
+    </ToastProvider>
   )
 }

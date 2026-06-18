@@ -1,0 +1,45 @@
+# ══════════════════════════════════════════════════════════════════════════
+#  Jal Sanket Kendra — Docker Compose (Development Override)
+#  Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# ══════════════════════════════════════════════════════════════════════════
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jal-sanket-kendra-dev
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=development
+      - DATABASE_URL=sqlite:///./data/water_quality.db
+      - CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:8000,http://localhost:8000
+      - LOG_LEVEL=DEBUG
+    volumes:
+      # Mount source for live backend changes (restart container to pick up)
+      - ./main.py:/app/main.py
+      - ./app:/app/app
+      - ./tests:/app/tests
+      - app-data:/app/data
+    restart: "no"
+
+  # Vite dev server with hot-reload for frontend development
+  frontend:
+    image: node:22-alpine
+    container_name: jal-sanket-kendra-frontend
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/web:/app
+      - frontend-node-modules:/app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    environment:
+      - NODE_ENV=development
+
+volumes:
+  app-data:
+    driver: local
+  frontend-node-modules:
+    driver: local

@@ -17,4 +17,4 @@ dependencies = [
 ]
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["app", "app.*"]
+include = ["app", "app.*", "app.routes", "app.routes.*", "app.services", "app.services.*"]

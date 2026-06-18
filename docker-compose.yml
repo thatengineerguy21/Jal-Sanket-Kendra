@@ -1,0 +1,42 @@
+# ══════════════════════════════════════════════════════════════════════════
+#  Jal Sanket Kendra — Docker Compose
+#  Single command: docker compose up --build
+# ══════════════════════════════════════════════════════════════════════════
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jal-sanket-kendra
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=production
+      - DATABASE_URL=sqlite:///./data/water_quality.db
+      - CORS_ORIGINS=*
+      - LOG_LEVEL=INFO
+      - MAX_UPLOAD_SIZE_BYTES=10485760
+      - RATE_LIMIT_PER_MINUTE=60
+    volumes:
+      # Persist SQLite database across container restarts
+      - app-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+volumes:
+  app-data:
+    driver: local

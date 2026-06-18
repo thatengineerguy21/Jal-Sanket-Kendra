@@ -1,220 +1,243 @@
-# Jal Sanket Kendra (Unfinished)
+# 🌊 Jal Sanket Kendra — जल संकेत केंद्र
 
-A small FastAPI application to calculate water quality indices (Heavy Metal Pollution Index : HPI, and Degree of Contamination  Cd), store results in a local SQLite database, and provide a simple static frontend.
+> Water Quality Monitoring & Heavy Metal Pollution Index Dashboard
 
----
-
-## Quick overview
-
-- API built with **FastAPI** (see `main.py`).
-- Calculation logic in `app/calculator.py`.
-- Data stored in a local **SQLite** DB (`water_quality.db` by default).
-- Static frontend served from `frontend/static/` and mounted at `/app`.
+A full-stack web application to calculate water quality indices (**Heavy Metal Pollution Index** and **Degree of Contamination**), store results in a local SQLite database, and visualize them through a modern, interactive dashboard.
 
 ---
 
-## Prerequisites
+## ✨ Features
 
-- Python 3.14 or newer
-- Java Runtime (JRE/JDK) on PATH, required for parsing PDFs with `tabula`.
-- Recommended: a virtual environment
+- **Upload & Analyze** — Upload water sample data (CSV, JSON, PDF, Excel) and compute HPI & Cd indices automatically
+- **Interactive Map** — Visualize sample locations and pollution hotspots on a dark-themed Leaflet map
+- **Hotspot Prediction** — Risk scoring and categorization for uploaded locations
+- **Alert System** — Configure HPI/Cd thresholds and send email/SMS notifications
+- **Modern Dashboard** — Glassmorphic dark UI with stat cards, drag-and-drop uploads, color-coded badges, and toast notifications
+- **Dockerized** — Single-command deployment with `docker compose up`
 
 ---
 
-## Install & run (pip users)
+## 🏗️ Architecture
 
-Open PowerShell in the project root (this folder) and run:
+```
+Jal-Sanket-Kendra/
+├── main.py                    # FastAPI entry point + middleware stack
+├── app/
+│   ├── config.py              # Centralized env-based settings
+│   ├── logging_config.py      # Structured JSON / dev logging
+│   ├── middleware.py           # Security headers, rate limiting, request ID
+│   ├── models.py              # SQLAlchemy ORM (WaterSample, PollutionResult, AlertConfig)
+│   ├── schemas.py             # Pydantic request/response schemas
+│   ├── calculator.py          # HPI & Cd calculation functions
+│   ├── api.py                 # Backward-compat router aggregator
+│   ├── routes/
+│   │   ├── upload.py          # POST /upload-and-calculate/
+│   │   ├── predict.py         # POST /predict-hotspots/
+│   │   ├── indices.py         # GET  /indices/, /datasets/
+│   │   ├── alerts.py          # GET/PUT /alerts/config, POST /alerts/send
+│   │   └── health.py          # GET  /health
+│   └── services/
+│       ├── file_parser.py     # Shared file parsing + validation
+│       └── calculation_service.py  # Business logic + DB operations
+├── frontend/
+│   ├── web/                   # React + Vite + Tailwind v4 source
+│   │   ├── src/
+│   │   │   ├── App.jsx        # Layout, navbar, toast system, routing
+│   │   │   ├── index.css      # 600+ line design system (CSS custom properties)
+│   │   │   └── pages/
+│   │   │       ├── DataView.jsx     # Dashboard + data table
+│   │   │       ├── MapView.jsx      # Leaflet map + legend
+│   │   │       ├── PredictView.jsx  # Hotspot predictions
+│   │   │       └── AlertsView.jsx   # Alert configuration
+│   │   └── vite.config.js
+│   └── static/                # Built frontend (served at /app)
+├── tests/                     # Pytest test suite
+├── Dockerfile                 # Multi-stage build (Node + Python)
+├── docker-compose.yml         # Production deployment
+└── docker-compose.dev.yml     # Development with hot-reload
+```
+
+---
+
+## 🚀 Quick Start
+
+### Option 1: Docker (Recommended)
+
+```bash
+docker compose up --build
+```
+
+Open http://localhost:8000/app/ — that's it.
+
+### Option 2: Manual Setup
+
+**Prerequisites:** Python 3.14+, Node.js 18+ (for frontend build), Java on PATH (for PDF parsing)
 
 ```powershell
-# Create & activate a virtual environment
+# 1. Create & activate virtual environment
 python -m venv .venv
-.\.venv\Scripts\Activate
+.\.venv\Scripts\Activate.ps1
 
-# Install the package in editable mode and extra tools
+# 2. Install Python dependencies
 pip install -e .
-```
 
-Initialize the database tables (run from project root):
+# 3. Build the frontend
+cd frontend/web
+npm install
+npm run build
+cd ../..
 
-```powershell
-python -c "from app import models; models.Base.metadata.create_all(models.engine)"
-```
-
-Start the server (run from the project root directory):
-
-```powershell
-python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
+# 4. Start the server
+python -m uvicorn main:app --reload
 ```
 
 Visit:
+- **Dashboard:** http://127.0.0.1:8000/app/
+- **API Docs:** http://127.0.0.1:8000/docs
+- **Health Check:** http://127.0.0.1:8000/api/v1/health
 
-- Frontend: http://127.0.0.1:8000/app/
-- API docs (Swagger): http://127.0.0.1:8000/docs
-
-
-### Important: Use the project's `.venv` (Windows PowerShell)
-
-If you created the project's virtual environment with `uv sync` or `python -m venv .venv`, make sure you're running commands with the project venv's Python. A common error is `ModuleNotFoundError: No module named 'sqlalchemy'` when your shell `python` is the system interpreter instead of `.venv`.
-
-Quick commands (run from project root):
+### Option 3: uv users
 
 ```powershell
-# Activate the venv in PowerShell (may require temporary policy change):
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-.\.venv\Scripts\Activate.ps1
-
-# Or run commands directly with the venv Python without activating:
-& .\.venv\Scripts\python.exe -V
-& .\.venv\Scripts\python.exe -c "from app import models; models.Base.metadata.create_all(models.engine)"
-& .\.venv\Scripts\python.exe -m pip install -e .
-```
-
-### Fix for `pip install -e .` failure when setuptools finds many top-level folders
-
-If `pip install -e .` fails with a message like "Multiple top-level packages discovered in a flat-layout: ['app', 'data', 'frontend']", add an explicit package discovery config to `pyproject.toml` so setuptools only packages the intended package (`app`). Add this snippet to `pyproject.toml`:
-
-```toml
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["app", "app.*"]
-```
-
-Then re-run:
-
-```powershell
-& .\.venv\Scripts\python.exe -m pip install -e .
-```
-
----
-
-## Install & run (uv users)
-
-This repository also supports workflows using the `uv` tool (used for dependency/manage/run in some environments). Example commands:
-
-```powershell
-# Initialize uv meta files (if not already present)
-uv init
-
-# Install dependencies using sync
 uv sync
-
-# Activate venv(Required)
 .\.venv\Scripts\Activate.ps1
-
-# Initialize Database Tables
-python -c "from app import models; models.Base.metadata.create_all(models.engine)"
-
-# If `uv` exposes a run command you can use it, otherwise use the uvicorn command below this
-# Example (if your `uv` supports `uv run`):
-uv run python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
-
-# Alternatively, run the same uvicorn command directly (after installing deps via `uv` or pip):
-python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
+cd frontend/web && npm install && npm run build && cd ../..
+python -m uvicorn main:app --reload
 ```
 
-Note: `uv` commands and flags depend on the `uv` implementation you have. The above shows common actions used in this project (init, add packages, run the server).
+### Option 4: Helper scripts
+
+```powershell
+# PowerShell
+.\scripts\start.ps1
+
+# Bash
+chmod +x scripts/start.sh && ./scripts/start.sh
+```
 
 ---
 
-## Uploading data & endpoints
+## 📡 API Endpoints
 
-- Upload & calculate: `POST /api/v1/upload-and-calculate/` (CSV/JSON/PDF/Excel)
-- Predict hotspots: `POST /api/v1/predict-hotspots/`
-- Summary: `GET /api/v1/indices/`
-- Datasets: `GET /api/v1/datasets/`
+All endpoints are prefixed with `/api/v1`.
 
-Example curl (CSV upload):
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/upload-and-calculate/` | Upload CSV/JSON/PDF/Excel, compute indices, store results |
+| `POST` | `/predict-hotspots/` | Upload data, get risk predictions per location |
+| `GET` | `/indices/` | Aggregate summary (count, avg HPI, avg Cd) |
+| `GET` | `/datasets/` | All stored water samples with results |
+| `GET` | `/alerts/config` | Get alert threshold configuration |
+| `PUT` | `/alerts/config` | Update alert thresholds and recipients |
+| `POST` | `/alerts/send` | Send email/SMS alert for hotspots |
+| `GET` | `/health` | Liveness probe (status, version, environment) |
+
+**Required columns** for upload files: `latitude`, `longitude`, `arsenic`, `cadmium`, `lead`, `zinc`
+
+**Example:**
 
 ```bash
-curl -X POST "http://127.0.0.1:8000/api/v1/upload-and-calculate/" -F "file=@data/test_data.csv;type=text/csv"
+curl -X POST "http://localhost:8000/api/v1/upload-and-calculate/" \
+  -F "file=@data/test_data.csv;type=text/csv"
 ```
 
-Required columns for upload: `latitude`, `longitude`, `arsenic`, `cadmium`, `lead`, `zinc`.
+---
+
+## ⚙️ Configuration
+
+All settings are configurable via environment variables (see `app/config.py`):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `APP_ENV` | `development` | `development` or `production` |
+| `DATABASE_URL` | `sqlite:///./water_quality.db` | Database connection string |
+| `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:8000` | Comma-separated allowed origins |
+| `MAX_UPLOAD_SIZE_BYTES` | `10485760` (10 MB) | Maximum upload file size |
+| `RATE_LIMIT_PER_MINUTE` | `60` | Requests per minute per IP |
+| `LOG_LEVEL` | `INFO` | Logging level |
+| `SENDGRID_API_KEY` | — | For email alerts |
+| `TWILIO_ACCOUNT_SID` | — | For SMS alerts |
+| `TWILIO_AUTH_TOKEN` | — | For SMS alerts |
 
 ---
 
-## Environment & extras
+## 🐳 Docker
 
-- To enable alert sending via email or SMS, set these environment variables:
-  - `SENDGRID_API_KEY`
-  - `TWILIO_ACCOUNT_SID`
-  - `TWILIO_AUTH_TOKEN`
-
----
-
-## Troubleshooting & tips
-
-- If PDF parsing fails, verify Java is installed and `java` is on your PATH.
-- If you see parsing errors from `tabula`, try converting the PDF tables to CSV first and re-upload.
-- Tests: `pytest -q`
-
----
-
-## Helper scripts (RECOMMENDED)
-
-Two helper scripts are included in `scripts/` to make getting started easier. Run them from the project root (this folder):
-
-- PowerShell: `scripts/start.ps1` — creates/activates `.venv`, installs dependencies (unless `-NoInstall` is passed), initializes the DB, and starts the server.
-
-  Example: `.\scripts\start.ps1`  — Note: run `.\	ools\..\scripts\start.ps1` from PowerShell in the project root.
-
-  Usage: `.\scripts\start.ps1` or `.\scripts\start.ps1 -Port 8080 -NoInstall`
-
-- Bash: `scripts/start.sh` — same behavior for Unix-like systems. Make it executable and run:
-
-  ```bash
-  chmod +x scripts/start.sh
-  ./scripts/start.sh --port 8080 --no-install
-  ```
-
-Both scripts will:
-
-- create a Python virtual environment (`.venv`) if missing
-- install dependencies with `pip install -e .` (skippable)
-- initialize the SQLite DB tables
-- launch uvicorn: `python -m uvicorn main:app --reload --host 127.0.0.1 --port <port>`
-
----
-
-## Test datasets & how to use them
-
-A sample test dataset is included at `data/test_data.csv`. It contains example water-sample rows used for manual testing and as a reference for automated tests.
-
-Required attributes (columns) for any test dataset:
-
-- `latitude` (float)
-- `longitude` (float)
-- `arsenic` (float)
-- `cadmium` (float)
-- `lead` (float)
-- `zinc` (float)
-
-Notes:
-
-- Column headers are case-sensitive in the code but the upload endpoint strips surrounding spaces from headers; ensure the exact names above are present.
-- Numeric values should be valid numbers. Missing values are treated as NaN and excluded from calculations for that metal.
-- Supported file formats for uploads: CSV, JSON (array of objects), PDF (table), and Excel (`.xlsx`).
-
-How to use the included CSV for a quick upload (curl):
+### Production
 
 ```bash
-curl -X POST "http://127.0.0.1:8000/api/v1/upload-and-calculate/" -F "file=@data/test_data.csv;type=text/csv"
+docker compose up --build
 ```
 
-Use the dataset in tests:
+- App available at http://localhost:8000/app/
+- SQLite data persisted in a Docker volume (`app-data`)
+- Health checks, resource limits, and auto-restart included
 
-- The test suite already includes examples in `tests/`.
-- To run the tests locally:
+### Development
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+```
+
+- Backend source mounted for live changes (restart container to apply)
+- Separate Vite dev server with hot-reload on http://localhost:5173
+
+---
+
+## 🔒 Security
+
+The API includes multiple security hardening layers:
+
+- **CORS middleware** — Configurable origin allow-list
+- **Rate limiting** — In-memory token-bucket limiter (60 req/min/IP)
+- **Security headers** — `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`, `Referrer-Policy`, `Permissions-Policy`, HSTS (production)
+- **Request ID tracking** — `X-Request-ID` header on every response
+- **File size limits** — 10 MB max upload (configurable)
+- **Input validation** — Pydantic schemas with constraints on all inputs
+- **Global exception handler** — No stack traces leaked to clients
+- **Non-root container** — Docker runs as `appuser:1001`
+
+---
+
+## 🧪 Testing
 
 ```powershell
 pytest -q
 ```
 
-Programmatic example (Python requests):
+Tests use an in-memory SQLite database for isolation and speed.
+
+---
+
+## 📁 Test Datasets
+
+A sample dataset is included at `data/test_data.csv`.
+
+**Required columns:** `latitude`, `longitude`, `arsenic`, `cadmium`, `lead`, `zinc`
+
+**Supported formats:** CSV, JSON (array of objects), PDF (tabular), Excel (`.xlsx`)
 
 ```python
 import requests
 with open('data/test_data.csv', 'rb') as f:
-    r = requests.post('http://127.0.0.1:8000/api/v1/upload-and-calculate/', files={'file': ('test_data.csv', f, 'text/csv')})
+    r = requests.post(
+        'http://localhost:8000/api/v1/upload-and-calculate/',
+        files={'file': ('test_data.csv', f, 'text/csv')}
+    )
     print(r.status_code, r.json())
 ```
+
+---
+
+## 📝 Troubleshooting
+
+- **`ModuleNotFoundError: No module named 'sqlalchemy'`** — Make sure `.venv` is activated
+- **PDF parsing fails** — Verify Java is installed and `java` is on your PATH
+- **`pip install -e .` fails with flat-layout error** — The `pyproject.toml` already includes `[tool.setuptools.packages.find]` to fix this
+- **Database column errors after upgrade** — The app auto-migrates missing columns on startup. If issues persist, delete `water_quality.db` and restart
+
+---
+
+## 📜 License
+
+This project is for educational and research purposes.

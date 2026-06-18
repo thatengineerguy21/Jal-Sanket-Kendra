@@ -1,60 +1,89 @@
 # app/calculator.py
+"""
+Pollution-index calculation functions.
+
+Changes from v1:
+- Input validation (negative values, NaN/Inf handling)
+- PERMISSIBLE_VALUES exported as a public constant
+- Full type hints
+- Pure-function design (accepts dict-like rows; still works with pd.Series)
+"""
+
+from __future__ import annotations
+
+import logging
+import math
+from typing import Any, Dict, Mapping, Tuple
 
 import pandas as pd
-import numpy as np
 
-# --- Configuration Constants for Calculations ---
-# These values are based on standards (e.g., WHO).
-# In a real-world app, these might be configurable or stored in a separate file.
+logger = logging.getLogger(__name__)
 
-# Standard Permissible Values (S_i) in µg/L
-PERMISSIBLE_VALUES = {
-    'arsenic': 10,
-    'cadmium': 3,
-    'lead': 10,
-    'zinc': 5000
+# ── Public Constants ────────────────────────────────────────────────────
+# Standard Permissible Values (S_i) in µg/L — based on WHO guidelines.
+PERMISSIBLE_VALUES: Dict[str, int] = {
+    "arsenic": 10,
+    "cadmium": 3,
+    "lead": 10,
+    "zinc": 5000,
 }
 
-# Unit Weightage (W_i), calculated as the inverse of the permissible value.
-UNIT_WEIGHTAGE = {metal: 1 / value for metal, value in PERMISSIBLE_VALUES.items()}
+# Unit Weightage (W_i) = 1 / S_i
+UNIT_WEIGHTAGE: Dict[str, float] = {
+    metal: 1.0 / value for metal, value in PERMISSIBLE_VALUES.items()
+}
 
 
-def calculate_hpi(row: pd.Series) -> tuple[float, str]:
+# ── Helpers ─────────────────────────────────────────────────────────────
+def _safe_value(row: Mapping[str, Any], key: str) -> float | None:
+    """Return a valid non-negative finite float, or None."""
+    if key not in row:
+        return None
+    val = row[key]
+    # pandas NaN check (works for plain floats too)
+    if val is None or (isinstance(val, float) and (math.isnan(val) or math.isinf(val))):
+        return None
+    # Also handle pandas NA-likes
+    try:
+        if pd.isna(val):
+            return None
+    except (TypeError, ValueError):
+        pass
+    val = float(val)
+    if val < 0:
+        logger.warning("Negative %s value (%.4f) clamped to 0", key, val)
+        return 0.0
+    return val
+
+
+# ── Public API ──────────────────────────────────────────────────────────
+def calculate_hpi(row: Mapping[str, Any]) -> Tuple[float, str]:
     """
-    Calculates the Heavy Metal Pollution Index (HPI) for a single water sample.
+    Heavy Metal Pollution Index (HPI).
 
-    HPI is a weighted arithmetic mean of the ratios of metal concentrations
-    to their standard permissible values.
-
-    Args:
-        row: A pandas Series representing a single sample's metal concentrations.
-
-    Returns:
-        A tuple containing the calculated HPI value and its quality category.
+    Weighted arithmetic mean of sub-index values.
+    Returns ``(hpi_value, category_string)``.
     """
-    numerator = 0
-    denominator = 0
+    numerator: float = 0.0
+    denominator: float = 0.0
 
     for metal, weight in UNIT_WEIGHTAGE.items():
-        if metal in row and pd.notna(row[metal]):
-            concentration = row[metal]
-            standard_value = PERMISSIBLE_VALUES[metal]
-
-            # Sub-index (Q_i) = (Concentration / Standard_Value) * 100
-            sub_index = (concentration / standard_value) * 100
-
-            numerator += sub_index * weight
-            denominator += weight
+        concentration = _safe_value(row, metal)
+        if concentration is None:
+            continue
+        standard_value = PERMISSIBLE_VALUES[metal]
+        sub_index = (concentration / standard_value) * 100
+        numerator += sub_index * weight
+        denominator += weight
 
     if denominator == 0:
         return 0.0, "No Data"
 
     hpi_value = numerator / denominator
 
-    # Categorize the HPI value
     if hpi_value < 100:
         category = "Low pollution"
-    elif 100 <= hpi_value < 150:
+    elif hpi_value < 150:
         category = "Moderate pollution"
     else:
         category = "High pollution"
@@ -62,31 +91,24 @@ def calculate_hpi(row: pd.Series) -> tuple[float, str]:
     return round(hpi_value, 2), category
 
 
-def calculate_degree_of_contamination(row: pd.Series) -> tuple[float, str]:
+def calculate_degree_of_contamination(row: Mapping[str, Any]) -> Tuple[float, str]:
     """
-    Calculates the Degree of Contamination (Cd) for a single water sample.
+    Degree of Contamination (Cd).
 
-    Cd is the sum of the contamination factors (CF) for each metal, where
-    CF is the ratio of the measured concentration to the permissible value.
-
-    Args:
-        row: A pandas Series representing a single sample's metal concentrations.
-
-    Returns:
-        A tuple containing the calculated Cd value and its quality category.
+    Sum of contamination factors for each metal.
+    Returns ``(cd_value, category_string)``.
     """
-    cd_value = 0
+    cd_value: float = 0.0
 
     for metal, standard_value in PERMISSIBLE_VALUES.items():
-        if metal in row and pd.notna(row[metal]):
-            concentration = row[metal]
-            contamination_factor = concentration / standard_value
-            cd_value += contamination_factor
+        concentration = _safe_value(row, metal)
+        if concentration is None:
+            continue
+        cd_value += concentration / standard_value
 
-    # Categorize the Cd value
     if cd_value < 1:
         category = "Low degree of contamination"
-    elif 1 <= cd_value < 3:
+    elif cd_value < 3:
         category = "Moderate degree of contamination"
     else:
         category = "High degree of contamination"

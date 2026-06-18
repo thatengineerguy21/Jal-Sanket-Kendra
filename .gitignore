@@ -94,4 +94,5 @@ local_settings.py
 # Misc
 .DS_Store
 app.txt
+/project-reference
 ```

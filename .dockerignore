@@ -1,0 +1,63 @@
+# ── Python ──────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+.venv/
+venv/
+ENV/
+*.egg-info/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# ── Node ────────────────────────────────────────────────────────────────
+node_modules/
+frontend/web/node_modules/
+frontend/static/
+
+# ── Git ─────────────────────────────────────────────────────────────────
+.git/
+.gitignore
+
+# ── IDE ─────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.sublime-*
+
+# ── OS ──────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Docker (don't send Docker files into build context) ─────────────────
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# ── Data / Secrets ──────────────────────────────────────────────────────
+*.db
+water_quality.db
+.env
+.env.*
+secrets.json
+
+# ── Build artifacts ─────────────────────────────────────────────────────
+dist/
+build/
+*.whl
+
+# ── Docs / Misc ─────────────────────────────────────────────────────────
+README.md
+LICENSE
+*.md
+*.log
+data/
+scripts/
+api/
+jalsanketkendra.egg-info/
+uv.lock
+.python-version
+.agents/

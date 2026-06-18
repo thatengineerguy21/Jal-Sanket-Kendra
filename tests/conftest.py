@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, StaticPool
 from sqlalchemy.orm import sessionmaker
 
 # Corrected import: 'app' is imported from 'main.py' in the root directory
@@ -10,10 +10,13 @@ from app.models import Base, get_db
 
 # --- Test Database Setup ---
 # Use an in-memory SQLite database for testing to ensure isolation and speed.
+# StaticPool ensures all connections share the same in-memory database.
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -51,7 +54,7 @@ def client(db_session):
         try:
             yield db_session
         finally:
-            db_session.close()
+            pass  # Don't close here — db_session fixture handles cleanup
 
     # Apply the override
     app.dependency_overrides[get_db] = override_get_db
@@ -61,4 +64,3 @@ def client(db_session):
 
     # Clean up the override after the test
     del app.dependency_overrides[get_db]
-
