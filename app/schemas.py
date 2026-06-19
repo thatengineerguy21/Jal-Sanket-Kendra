@@ -31,6 +31,14 @@ class SampleResponse(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     
+    # New dedicated DB columns
+    fe: Optional[float] = None
+    as_: Optional[float] = None
+    u: Optional[float] = None
+    hmpi_bis: Optional[float] = None
+    hei_bis: Optional[float] = None
+    pli_bis: Optional[float] = None
+
     parameters: Dict[str, Any] = Field(default_factory=dict)
     standards: Dict[str, Any] = Field(default_factory=dict)
     validation_issues: List[str] = Field(default_factory=list)
@@ -38,15 +46,29 @@ class SampleResponse(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    # coordinates mapped for the frontend
-    coordinates: Optional[Dict[str, List[float]]] = None
-
     model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedSampleResponse(BaseModel):
+    total: int
+    items: List[SampleResponse]
+
+
+class MapPointResponse(BaseModel):
+    id: int
+    latitude: float
+    longitude: float
+    hmpi_bis: Optional[float] = None
+
+
+class MapResponse(BaseModel):
+    points: List[MapPointResponse]
 
 
 # ── Indices ─────────────────────────────────────────────────────────────
 class IndicesSummary(BaseModel):
     count: int
+    invalid_count: int = 0
     avg_hmpi: float = 0.0
     avg_hei: float = 0.0
     avg_pli: float = 0.0

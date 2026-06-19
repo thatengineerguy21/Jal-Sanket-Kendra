@@ -39,16 +39,26 @@ class WaterSample(Base):
 
     id: int = Column(Integer, primary_key=True, index=True)
     
-    village_code: str = Column(String, nullable=True)
-    state: str = Column(String, nullable=True)
-    district: str = Column(String, nullable=True)
-    location: str = Column(String, nullable=True)
-    year: int = Column(Integer, nullable=True)
+    village_code: str = Column(String, index=True, nullable=True)
+    state: str = Column(String, index=True, nullable=True)
+    district: str = Column(String, index=True, nullable=True)
+    location: str = Column(String, index=True, nullable=True)
+    year: int = Column(Integer, index=True, nullable=True)
     source: str = Column(String, nullable=True)
 
-    latitude: float = Column(Float, nullable=True)
-    longitude: float = Column(Float, nullable=True)
+    latitude: float = Column(Float, index=True, nullable=True)
+    longitude: float = Column(Float, index=True, nullable=True)
 
+    # High-priority extracted numeric fields for blazing fast API queries
+    fe: float = Column(Float, nullable=True)
+    as_: float = Column(Float, nullable=True)
+    u: float = Column(Float, nullable=True)
+
+    hmpi_bis: float = Column(Float, index=True, nullable=True)
+    hei_bis: float = Column(Float, nullable=True)
+    pli_bis: float = Column(Float, nullable=True)
+
+    # JSON fallback for dynamic/unstructured payload parts
     parameters_json: str = Column(Text, default="{}")
     standards_json: str = Column(Text, default="{}")
     validation_issues_json: str = Column(Text, default="[]")

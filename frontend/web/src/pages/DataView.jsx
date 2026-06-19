@@ -178,32 +178,32 @@ export default function DataView({ samples, setSamples, summary }) {
   const [dragOver, setDragOver] = useState(false)
   const [standard, setStandard] = useState('BIS')
   const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
   const PAGE_SIZE = 100
 
-  const totalPages = Math.ceil((samples?.length || 0) / PAGE_SIZE) || 1
-  const visibleSamples = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE
-    return (samples || []).slice(start, start + PAGE_SIZE)
-  }, [samples, page])
+  const totalPages = Math.ceil(total / PAGE_SIZE) || 1
+  const visibleSamples = samples || []
 
   const fileRef = useRef(null)
   const addToast = useToast()
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
-      const res = await fetch(API('/api/v1/datasets/')) // Fixed endpoint
+      const offset = (page - 1) * PAGE_SIZE
+      const res = await fetch(API(`/api/v1/datasets/?limit=${PAGE_SIZE}&offset=${offset}`))
       if (res.ok) {
         const data = await res.json()
-        setSamples(Array.isArray(data) ? data : (data.items || []))
+        setSamples(data.items || [])
+        setTotal(data.total || 0)
       }
     } catch (e) {
       console.error(e)
     }
-  }
+  }, [page, setSamples])
 
   useEffect(() => {
     load()
-  }, [])
+  }, [load])
 
   const processUpload = async (file) => {
     if (!file) {
@@ -272,12 +272,12 @@ export default function DataView({ samples, setSamples, summary }) {
       location: `${s.state || ''} / ${s.district || ''} / ${s.location || ''}`,
       latitude: s.latitude,
       longitude: s.longitude,
-      Fe: s.parameters?.Fe,
-      As: s.parameters?.As,
-      U: s.parameters?.U,
-      HMPI: s.standards?.[standard]?.hmpi,
-      HEI: s.standards?.[standard]?.hei,
-      PLI: s.standards?.[standard]?.pli,
+      Fe: s.fe ?? s.parameters?.Fe,
+      As: s.as_ ?? s.parameters?.As,
+      U: s.u ?? s.parameters?.U,
+      HMPI: s.hmpi_bis ?? s.standards?.[standard]?.hmpi,
+      HEI: s.hei_bis ?? s.standards?.[standard]?.hei,
+      PLI: s.pli_bis ?? s.standards?.[standard]?.pli,
     }))
     const csv = Papa.unparse(rows)
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
@@ -304,12 +304,12 @@ export default function DataView({ samples, setSamples, summary }) {
       `${s.state || ''} / ${s.district || ''} / ${s.location || ''}`,
       s.latitude || '—',
       s.longitude || '—',
-      s.parameters?.Fe || '—',
-      s.parameters?.As || '—',
-      s.parameters?.U || '—',
-      s.standards?.[standard]?.hmpi?.toFixed(2) || '—',
-      s.standards?.[standard]?.hei?.toFixed(2) || '—',
-      s.standards?.[standard]?.pli?.toFixed(2) || '—',
+      s.fe ?? s.parameters?.Fe ?? '—',
+      s.as_ ?? s.parameters?.As ?? '—',
+      s.u ?? s.parameters?.U ?? '—',
+      s.hmpi_bis != null ? s.hmpi_bis.toFixed(2) : (s.standards?.[standard]?.hmpi?.toFixed(2) || '—'),
+      s.hei_bis != null ? s.hei_bis.toFixed(2) : (s.standards?.[standard]?.hei?.toFixed(2) || '—'),
+      s.pli_bis != null ? s.pli_bis.toFixed(2) : (s.standards?.[standard]?.pli?.toFixed(2) || '—'),
     ])
     autoTable(doc, {
       head,
@@ -338,7 +338,7 @@ export default function DataView({ samples, setSamples, summary }) {
       </div>
 
       {/* ── Summary Stats ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger-children">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
         <StatCard
           icon={icons.hpi}
           label="Avg HMPI"
@@ -360,6 +360,13 @@ export default function DataView({ samples, setSamples, summary }) {
           subtitle="Pollution Load Index"
           color="amber"
         />
+        <StatCard
+          icon={icons.alert}
+          label="Invalid Records"
+          value={summary?.invalid_count != null ? summary.invalid_count : '—'}
+          subtitle={summary?.count ? `${summary.count - summary.invalid_count} valid` : '—'}
+          color="rose"
+        />
       </div>
 
       {/* ── Upload & Template Section ── */}
@@ -379,7 +386,7 @@ export default function DataView({ samples, setSamples, summary }) {
             <input
               ref={fileRef}
               type="file"
-              accept=".csv,.json,.xlsx,.xls"
+              accept=".csv,.json,.xlsx,.xls,.pdf"
               className="hidden"
               aria-label="Choose file to upload"
               onChange={(e) => {
@@ -405,7 +412,7 @@ export default function DataView({ samples, setSamples, summary }) {
                 )}
               </p>
               <p className="text-xs mt-1" style={{ color: 'var(--color-text-500)' }}>
-                CSV, JSON, Excel files supported
+                CSV, JSON, PDF, Excel files supported
               </p>
             </div>
           </div>
@@ -495,7 +502,7 @@ export default function DataView({ samples, setSamples, summary }) {
           <span>Export PDF</span>
         </button>
         <span className="ml-auto text-xs" style={{ color: 'var(--color-text-500)' }}>
-          {samples?.length || 0} records
+          {total || 0} records
         </span>
       </div>
 
@@ -528,23 +535,30 @@ export default function DataView({ samples, setSamples, summary }) {
               </tr>
             ) : (
               visibleSamples.map((s, i) => (
-                <tr key={s._id || i} className="spell-stagger-row">
+                <tr key={s.id || i} className="spell-stagger-row" style={{ opacity: s.validation_issues?.length > 0 ? 0.6 : 1 }}>
                   <td>
                     <div className="text-xs">
-                      <div className="font-medium" style={{ color: 'var(--color-text-100)' }}>{s.location || '—'}</div>
+                      <div className="font-medium flex items-center gap-1" style={{ color: 'var(--color-text-100)' }}>
+                        {s.location || '—'}
+                        {s.validation_issues?.length > 0 && (
+                          <span title={s.validation_issues.join(', ')} style={{ color: 'var(--color-danger-400)', cursor: 'help' }}>
+                            {icons.alert}
+                          </span>
+                        )}
+                      </div>
                       <div style={{ color: 'var(--color-text-500)' }}>{s.district ? `${s.state}, ${s.district}` : (s.state || '—')}</div>
                     </div>
                   </td>
                   <td className="font-mono-nums">{formatNum(s.latitude)}</td>
                   <td className="font-mono-nums">{formatNum(s.longitude)}</td>
-                  <td className="font-mono-nums">{formatNum(s.parameters?.Fe)}</td>
-                  <td className="font-mono-nums">{formatNum(s.parameters?.As)}</td>
-                  <td className="font-mono-nums">{formatNum(s.parameters?.U)}</td>
+                  <td className="font-mono-nums">{formatNum(s.fe ?? s.parameters?.Fe)}</td>
+                  <td className="font-mono-nums">{formatNum(s.as_ ?? s.parameters?.As)}</td>
+                  <td className="font-mono-nums">{formatNum(s.u ?? s.parameters?.U)}</td>
                   <td className="font-mono-nums" style={{ fontWeight: 600 }}>
-                    {formatNum(s.standards?.[standard]?.hmpi)}
+                    {formatNum(s.hmpi_bis ?? s.standards?.[standard]?.hmpi)}
                   </td>
-                  <td className="font-mono-nums">{formatNum(s.standards?.[standard]?.hei)}</td>
-                  <td className="font-mono-nums">{formatNum(s.standards?.[standard]?.pli)}</td>
+                  <td className="font-mono-nums">{formatNum(s.hei_bis ?? s.standards?.[standard]?.hei)}</td>
+                  <td className="font-mono-nums">{formatNum(s.pli_bis ?? s.standards?.[standard]?.pli)}</td>
                 </tr>
               ))
             )}
@@ -556,7 +570,7 @@ export default function DataView({ samples, setSamples, summary }) {
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-4 py-3 glass-card text-xs">
           <span style={{ color: 'var(--color-text-400)' }}>
-            Showing {((page - 1) * PAGE_SIZE) + 1} to {Math.min(page * PAGE_SIZE, samples.length)} of {samples.length} entries
+            Showing {((page - 1) * PAGE_SIZE) + 1} to {Math.min(page * PAGE_SIZE, total)} of {total} entries
           </span>
           <div className="flex items-center gap-2">
             <button

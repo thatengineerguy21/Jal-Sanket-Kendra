@@ -286,7 +286,7 @@ export default function App() {
               />
               <Route
                 path="/map"
-                element={<MapView samples={samples} preds={preds} />}
+                element={<MapView samples={samples} preds={preds} summary={summary} />}
               />
               <Route
                 path="/predict"

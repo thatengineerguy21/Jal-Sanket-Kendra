@@ -76,6 +76,8 @@ async def create_upload_file(
     samples_created = 0
     now = datetime.now(timezone.utc)
     
+    samples_list = []
+    
     for r in rows:
         village_code = normalize_str(r.get("village_code")) or None
         state = normalize_str(r.get("state")) or None
@@ -174,14 +176,21 @@ async def create_upload_file(
             source=source,
             latitude=lat_val,
             longitude=lon_val,
+            fe=parameters.get("Fe"),
+            as_=parameters.get("As"),
+            u=parameters.get("U"),
+            hmpi_bis=standards.get("BIS", {}).get("hmpi") if standards.get("BIS") else None,
+            hei_bis=standards.get("BIS", {}).get("hei") if standards.get("BIS") else None,
+            pli_bis=standards.get("BIS", {}).get("pli") if standards.get("BIS") else None,
         )
         sample.parameters = parameters
         sample.standards = standards
         sample.validation_issues = issues
         
-        db.add(sample)
+        samples_list.append(sample)
         samples_created += 1
 
+    db.bulk_save_objects(samples_list)
     db.commit()
     logger.info("Processed %d samples from upload", samples_created)
 

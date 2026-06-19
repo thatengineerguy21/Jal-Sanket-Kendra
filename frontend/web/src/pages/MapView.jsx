@@ -191,26 +191,49 @@ function PredPopup({ pred }) {
   )
 }
 
+const API = (path) => new URL(path, window.location.origin).toString()
+
 /* ═══════════════════════════════════════════
    Dynamic Layer Wrapper (H3 -> Cluster -> Points)
    ═══════════════════════════════════════════ */
-function DynamicMapLayer({ samples, preds }) {
+function DynamicMapLayer({ preds }) {
   const [zoom, setZoom] = useState(8)
+  const [mapPoints, setMapPoints] = useState([])
   
+  const fetchPoints = async (m) => {
+    try {
+      const bounds = m.getBounds()
+      const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`
+      const res = await fetch(API(`/api/v1/datasets/map?bbox=${bbox}`))
+      if (res.ok) {
+        const data = await res.json()
+        setMapPoints(data.points || [])
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
   const map = useMapEvents({
     zoomend: () => setZoom(map.getZoom()),
+    moveend: () => fetchPoints(map),
   })
 
-  // Memoize H3 hex calculation (very expensive for large datasets)
+  // Initial fetch on mount
+  React.useEffect(() => {
+    fetchPoints(map)
+  }, [map])
+
+  // Memoize H3 hex calculation
   const macroHexagons = useMemo(() => {
     const hexBins = {}
-    samples.forEach(s => {
+    mapPoints.forEach(s => {
       if (s.latitude == null || s.longitude == null) return
       // Use resolution 3 instead of 4 for larger hexagons, preventing overlap on massive datasets
       const hex = latLngToCell(s.latitude, s.longitude, 3)
       if (!hexBins[hex]) hexBins[hex] = { count: 0, sumHmpi: 0 }
       hexBins[hex].count++
-      hexBins[hex].sumHmpi += (s.standards?.['BIS']?.hmpi || 0)
+      hexBins[hex].sumHmpi += (s.hmpi_bis || 0)
     })
 
     return Object.entries(hexBins).map(([hex, data]) => {
@@ -244,14 +267,22 @@ function DynamicMapLayer({ samples, preds }) {
         </Polygon>
       )
     })
-  }, [samples])
+  }, [mapPoints])
 
   // Memoize sample marker generation
   const sampleMarkers = useMemo(() => {
-    return samples.map((s, i) => {
-      const hmpi = s.standards?.['BIS']?.hmpi
+    return mapPoints.map((s, i) => {
+      const hmpi = s.hmpi_bis
       const cat = hmpi != null ? getHmpiCategory(hmpi) : ''
       const color = getCategoryColor(cat)
+      
+      // Construct a faux sample object for the existing popup component
+      const fauxSample = {
+        latitude: s.latitude,
+        longitude: s.longitude,
+        standards: { BIS: { hmpi: s.hmpi_bis } }
+      }
+
       return (
         <CircleMarker
           key={`s-${s.id || i}`}
@@ -266,12 +297,12 @@ function DynamicMapLayer({ samples, preds }) {
           }}
         >
           <Popup>
-            <SamplePopup sample={s} />
+            <SamplePopup sample={fauxSample} />
           </Popup>
         </CircleMarker>
       )
     })
-  }, [samples])
+  }, [mapPoints])
 
   // Memoize prediction marker generation
   const predMarkers = useMemo(() => {
@@ -317,7 +348,7 @@ function DynamicMapLayer({ samples, preds }) {
 /* ═══════════════════════════════════════════
    MapView Component
    ═══════════════════════════════════════════ */
-export default function MapView({ samples = [], preds = [] }) {
+export default function MapView({ samples = [], preds = [], summary }) {
   const center = useMemo(() => {
     if (samples.length > 0) return [samples[0].latitude, samples[0].longitude]
     if (preds.length > 0) return [preds[0].latitude, preds[0].longitude]
@@ -337,12 +368,12 @@ export default function MapView({ samples = [], preds = [] }) {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
         />
 
-        <DynamicMapLayer samples={samples} preds={preds} />
+        <DynamicMapLayer preds={preds} />
       </MapContainer>
 
       {/* Overlays */}
       <MapLegend />
-      <MapStats sampleCount={samples.length} predCount={preds.length} />
+      <MapStats sampleCount={summary?.count || samples.length} predCount={preds.length} />
     </div>
   )
 }
