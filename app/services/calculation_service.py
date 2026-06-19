@@ -15,24 +15,11 @@ from app import models
 
 logger = logging.getLogger(__name__)
 
-# Constants for Heavy Metals
-WHO_LIMITS_METALS = {
-    "Fe": 0.3,
-    "As": 0.01,
-    "U": 0.03,
-}
+from app.standards import STANDARDS, RFD
 
-BIS_LIMITS_METALS = {
-    "Fe": 0.3,
-    "As": 0.01,
-    "U": 0.06,
-}
-
-RFD = {
-    "Fe": 0.7,
-    "As": 0.0003,
-    "U": 0.003,
-}
+# Constants for Heavy Metals dynamically loaded from standards
+WHO_LIMITS_METALS = {k: v["Si"] for k, v in STANDARDS.get("WHO", {}).items() if "Si" in v}
+BIS_LIMITS_METALS = {k: v["Si"] for k, v in STANDARDS.get("BIS", {}).items() if "Si" in v}
 
 def safe_div(a: float, b: float):
     try:
@@ -95,16 +82,15 @@ def calc_hi(params: Dict[str, float], rfd: Dict[str, float]):
 
 def convert_units_for_metals(params: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Convert ppb → mg/L for As & U.
-    Fe is assumed to be mg/L (ppm), kept as is.
+    Convert ppb → mg/L for trace metals commonly reported in ppb.
+    Fe, Mn, Zn, Cu are assumed to be mg/L (ppm) and kept as is.
     """
     converted = dict(params)
+    trace_metals_in_ppb = ["As", "U", "Pb", "Cd", "Cr", "Hg", "Ni"]
 
-    if "As" in converted and converted["As"] is not None:
-        converted["As"] = converted["As"] / 1000.0  # ppb → mg/L
-
-    if "U" in converted and converted["U"] is not None:
-        converted["U"] = converted["U"] / 1000.0  # ppb → mg/L
+    for metal in trace_metals_in_ppb:
+        if metal in converted and converted[metal] is not None:
+            converted[metal] = converted[metal] / 1000.0  # ppb → mg/L
 
     return converted
 

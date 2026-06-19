@@ -28,14 +28,25 @@ PARAM_COLUMN_MAP = {
     "parameters.F": "F",
     "parameters.SO4": "SO4",
     "parameters.NO3": "NO3",
+    "parameters.PO4": "PO4",
     "parameters.total_hardness": "total_hardness",
     "parameters.Ca": "Ca",
     "parameters.Mg": "Mg",
     "parameters.Na": "Na",
     "parameters.K": "K",
+    "parameters.TDS": "TDS",
+    "parameters.SiO2": "SiO2",
     "parameters.Fe": "Fe",
+    "parameters.Mn": "Mn",
+    "parameters.Zn": "Zn",
+    "parameters.Cu": "Cu",
     "parameters.U": "U",
     "parameters.As": "As",
+    "parameters.Pb": "Pb",
+    "parameters.Cd": "Cd",
+    "parameters.Cr": "Cr",
+    "parameters.Hg": "Hg",
+    "parameters.Ni": "Ni",
 }
 
 def to_int_or_none(v):
@@ -98,17 +109,15 @@ async def create_upload_file(
         
         if lon_val is None: 
             issues.append("longitude missing/invalid")
-            lon_val = 0.0
         elif not (-180.0 <= lon_val <= 180.0): 
             issues.append("longitude out of range (-180, 180)")
-            lon_val = 0.0
+            lon_val = None
             
         if lat_val is None: 
             issues.append("latitude missing/invalid")
-            lat_val = 0.0
         elif not (-90.0 <= lat_val <= 90.0): 
             issues.append("latitude out of range (-90, 90)")
-            lat_val = 0.0
+            lat_val = None
             
         if year_val is None: issues.append("year missing/invalid")
         elif not (1900 <= year_val <= 2100): issues.append("year out of range (1900-2100)")
@@ -129,9 +138,9 @@ async def create_upload_file(
             continue
 
         metal_raw: Dict[str, float] = {}
-        if "Fe" in parameters: metal_raw["Fe"] = parameters["Fe"]
-        if "As" in parameters: metal_raw["As"] = parameters["As"]
-        if "U" in parameters: metal_raw["U"] = parameters["U"]
+        for metal in ["Fe", "Mn", "Zn", "Cu", "U", "As", "Pb", "Cd", "Cr", "Hg", "Ni"]:
+            if metal in parameters:
+                metal_raw[metal] = parameters[metal]
 
         metals_mgL = calculation_service.convert_units_for_metals(metal_raw)
 
@@ -167,6 +176,7 @@ async def create_upload_file(
         if missing_metals:
             issues.append(f"Historical index was computed with a reduced parameter set (Missing: {', '.join(missing_metals)}).")
 
+        import json
         sample = models.WaterSample(
             village_code=village_code,
             state=state,
@@ -182,10 +192,10 @@ async def create_upload_file(
             hmpi_bis=standards.get("BIS", {}).get("hmpi") if standards.get("BIS") else None,
             hei_bis=standards.get("BIS", {}).get("hei") if standards.get("BIS") else None,
             pli_bis=standards.get("BIS", {}).get("pli") if standards.get("BIS") else None,
+            parameters_json=json.dumps(parameters),
+            standards_json=json.dumps(standards),
+            validation_issues_json=json.dumps(issues),
         )
-        sample.parameters = parameters
-        sample.standards = standards
-        sample.validation_issues = issues
         
         samples_list.append(sample)
         samples_created += 1

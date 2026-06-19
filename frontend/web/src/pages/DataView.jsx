@@ -90,9 +90,11 @@ const REQUIRED_COLUMNS = [
   "coordinates.coordinates[0]", "coordinates.coordinates[1]",
   "parameters.pH", "parameters.EC", "parameters.CO3", "parameters.HCO3",
   "parameters.Cl", "parameters.F", "parameters.SO4", "parameters.NO3",
-  "parameters.total_hardness", "parameters.Ca", "parameters.Mg", "parameters.Na",
-  "parameters.K", "parameters.Fe", "parameters.U", "parameters.As",
-  "source"
+  "parameters.PO4", "parameters.total_hardness", "parameters.Ca", "parameters.Mg", 
+  "parameters.Na", "parameters.K", "parameters.TDS", "parameters.SiO2",
+  "parameters.Fe", "parameters.Mn", "parameters.Zn", "parameters.Cu", 
+  "parameters.U", "parameters.As", "parameters.Pb", "parameters.Cd", 
+  "parameters.Cr", "parameters.Hg", "parameters.Ni", "source"
 ]
 
 const COLUMNS = [
