@@ -109,6 +109,15 @@ def convert_units_for_metals(params: Dict[str, Any]) -> Dict[str, Any]:
     return converted
 
 
+def get_missing_metals(params: Dict[str, Any], limits: Dict[str, float]) -> List[str]:
+    """Return a list of expected metals that are missing or None in the params."""
+    missing = []
+    for metal in limits.keys():
+        if metal not in params or params[metal] is None:
+            missing.append(metal)
+    return missing
+
+
 def predict_hotspots(rows: List[Mapping]) -> List[Dict[str, Any]]:
     """
     Compute per-location pollution risk predictions from uploaded data.

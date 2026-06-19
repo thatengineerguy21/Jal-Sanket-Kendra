@@ -66,6 +66,8 @@ class QuickCalcResponse(BaseModel):
     """Response from the quick calculator endpoint."""
     indices: Dict[str, Any]
     standard: str
+    reduced_parameter_set: bool = False
+    missing_parameters: List[str] = Field(default_factory=list)
 
 
 # ── Predictions ─────────────────────────────────────────────────────────

@@ -1,5 +1,14 @@
 import React, { useMemo, useState } from 'react'
-import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet'
+import { MapContainer, TileLayer, CircleMarker, Popup, Polygon, Tooltip, useMapEvents } from 'react-leaflet'
+import MarkerClusterGroup from 'react-leaflet-cluster'
+import { latLngToCell, cellToBoundary } from 'h3-js'
+
+// Polyfill for Leaflet 1.9.4 bug where hover events on Text nodes crash the map
+if (typeof window !== 'undefined' && window.Text && !window.Text.prototype.closest) {
+  window.Text.prototype.closest = function (s) {
+    return this.parentNode ? this.parentNode.closest(s) : null;
+  };
+}
 
 /* ═══════════════════════════════════════════
    Color Helpers
@@ -103,11 +112,21 @@ function MapStats({ sampleCount, predCount }) {
   )
 }
 
+function getHmpiCategory(score) {
+  if (score == null) return 'Unknown'
+  if (score < 25) return 'Low'
+  if (score < 50) return 'Moderate'
+  if (score < 75) return 'High'
+  return 'Critical'
+}
+
 /* ═══════════════════════════════════════════
    Popup Content
    ═══════════════════════════════════════════ */
 function SamplePopup({ sample }) {
-  const cat = sample.result?.hpi_category || 'Unknown'
+  const hmpi = sample.standards?.['BIS']?.hmpi
+  const hei = sample.standards?.['BIS']?.hei
+  const cat = getHmpiCategory(hmpi)
   const color = getCategoryColor(cat)
 
   return (
@@ -120,19 +139,15 @@ function SamplePopup({ sample }) {
       </div>
       <div className="space-y-1 text-xs" style={{ color: 'var(--color-text-300)' }}>
         <div className="flex justify-between">
-          <span>HPI</span>
+          <span>HMPI</span>
           <span className="font-semibold" style={{ color: 'var(--color-text-100)' }}>
-            {sample.result?.heavy_metal_pollution_index != null
-              ? Number(sample.result.heavy_metal_pollution_index).toFixed(2)
-              : '—'}
+            {hmpi != null ? Number(hmpi).toFixed(2) : '—'}
           </span>
         </div>
         <div className="flex justify-between">
-          <span>Cd Index</span>
+          <span>HEI</span>
           <span className="font-semibold" style={{ color: 'var(--color-text-100)' }}>
-            {sample.result?.degree_of_contamination != null
-              ? Number(sample.result.degree_of_contamination).toFixed(2)
-              : '—'}
+            {hei != null ? Number(hei).toFixed(2) : '—'}
           </span>
         </div>
         <div className="flex justify-between">
@@ -177,6 +192,129 @@ function PredPopup({ pred }) {
 }
 
 /* ═══════════════════════════════════════════
+   Dynamic Layer Wrapper (H3 -> Cluster -> Points)
+   ═══════════════════════════════════════════ */
+function DynamicMapLayer({ samples, preds }) {
+  const [zoom, setZoom] = useState(8)
+  
+  const map = useMapEvents({
+    zoomend: () => setZoom(map.getZoom()),
+  })
+
+  // Memoize H3 hex calculation (very expensive for large datasets)
+  const macroHexagons = useMemo(() => {
+    const hexBins = {}
+    samples.forEach(s => {
+      if (s.latitude == null || s.longitude == null) return
+      // Use resolution 3 instead of 4 for larger hexagons, preventing overlap on massive datasets
+      const hex = latLngToCell(s.latitude, s.longitude, 3)
+      if (!hexBins[hex]) hexBins[hex] = { count: 0, sumHmpi: 0 }
+      hexBins[hex].count++
+      hexBins[hex].sumHmpi += (s.standards?.['BIS']?.hmpi || 0)
+    })
+
+    return Object.entries(hexBins).map(([hex, data]) => {
+      const avgHmpi = data.sumHmpi / data.count
+      const cat = getHmpiCategory(avgHmpi)
+      const color = getCategoryColor(cat)
+      const boundary = cellToBoundary(hex).map(p => [p[0], p[1]])
+
+      return (
+        <Polygon 
+          key={hex} 
+          positions={boundary} 
+          pathOptions={{ fillColor: color, color: color, fillOpacity: 0.6, weight: 1 }}
+        >
+          <Tooltip direction="center" permanent={false} interactive={false} opacity={1} className="hex-tooltip">
+            <div style={{
+              background: 'rgba(15, 23, 42, 0.95)',
+              color: '#f8fafc',
+              padding: '4px 10px',
+              borderRadius: '8px',
+              fontSize: '12px',
+              fontWeight: 700,
+              border: `2px solid ${color}`,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+              transform: 'translate(-50%, -50%)',
+              whiteSpace: 'nowrap'
+            }}>
+              [ {data.count} ]
+            </div>
+          </Tooltip>
+        </Polygon>
+      )
+    })
+  }, [samples])
+
+  // Memoize sample marker generation
+  const sampleMarkers = useMemo(() => {
+    return samples.map((s, i) => {
+      const hmpi = s.standards?.['BIS']?.hmpi
+      const cat = hmpi != null ? getHmpiCategory(hmpi) : ''
+      const color = getCategoryColor(cat)
+      return (
+        <CircleMarker
+          key={`s-${s.id || i}`}
+          center={[s.latitude, s.longitude]}
+          radius={7}
+          pathOptions={{
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.6,
+            weight: 2,
+            opacity: 0.9,
+          }}
+        >
+          <Popup>
+            <SamplePopup sample={s} />
+          </Popup>
+        </CircleMarker>
+      )
+    })
+  }, [samples])
+
+  // Memoize prediction marker generation
+  const predMarkers = useMemo(() => {
+    return preds.map((p, i) => {
+      const cat = p.risk_category || ''
+      const color = getCategoryColor(cat)
+      return (
+        <CircleMarker
+          key={`p-${i}`}
+          center={[p.latitude, p.longitude]}
+          radius={8}
+          pathOptions={{
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.2,
+            weight: 2.5,
+            opacity: 0.9,
+            dashArray: '4 3',
+          }}
+        >
+          <Popup>
+            <PredPopup pred={p} />
+          </Popup>
+        </CircleMarker>
+      )
+    })
+  }, [preds])
+
+  // 1. MACRO ZOOM: H3 Hexagons
+  if (zoom < 6) {
+    return <>{macroHexagons}</>
+  }
+
+  // 2 & 3. MID / CLOSE ZOOM: Marker Clustering -> Points
+  return (
+    <MarkerClusterGroup chunkedLoading disableClusteringAtZoom={9} maxClusterRadius={60}>
+      {sampleMarkers}
+      {predMarkers}
+    </MarkerClusterGroup>
+  )
+}
+
+/* ═══════════════════════════════════════════
    MapView Component
    ═══════════════════════════════════════════ */
 export default function MapView({ samples = [], preds = [] }) {
@@ -199,54 +337,7 @@ export default function MapView({ samples = [], preds = [] }) {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
         />
 
-        {/* Sample Markers */}
-        {samples.map((s, i) => {
-          const cat = s.result?.hpi_category || ''
-          const color = getCategoryColor(cat)
-          return (
-            <CircleMarker
-              key={`s-${s.id || i}`}
-              center={[s.latitude, s.longitude]}
-              radius={7}
-              pathOptions={{
-                color: color,
-                fillColor: color,
-                fillOpacity: 0.6,
-                weight: 2,
-                opacity: 0.9,
-              }}
-            >
-              <Popup>
-                <SamplePopup sample={s} />
-              </Popup>
-            </CircleMarker>
-          )
-        })}
-
-        {/* Prediction Markers — ring-style (lower fill opacity) */}
-        {preds.map((p, i) => {
-          const cat = p.risk_category || ''
-          const color = getCategoryColor(cat)
-          return (
-            <CircleMarker
-              key={`p-${i}`}
-              center={[p.latitude, p.longitude]}
-              radius={8}
-              pathOptions={{
-                color: color,
-                fillColor: color,
-                fillOpacity: 0.2,
-                weight: 2.5,
-                opacity: 0.9,
-                dashArray: '4 3',
-              }}
-            >
-              <Popup>
-                <PredPopup pred={p} />
-              </Popup>
-            </CircleMarker>
-          )
-        })}
+        <DynamicMapLayer samples={samples} preds={preds} />
       </MapContainer>
 
       {/* Overlays */}

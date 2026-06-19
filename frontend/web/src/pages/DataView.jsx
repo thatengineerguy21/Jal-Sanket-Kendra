@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react'
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import Papa from 'papaparse'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -177,6 +177,15 @@ export default function DataView({ samples, setSamples, summary }) {
   const [busy, setBusy] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [standard, setStandard] = useState('BIS')
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 100
+
+  const totalPages = Math.ceil((samples?.length || 0) / PAGE_SIZE) || 1
+  const visibleSamples = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE
+    return (samples || []).slice(start, start + PAGE_SIZE)
+  }, [samples, page])
+
   const fileRef = useRef(null)
   const addToast = useToast()
 
@@ -261,8 +270,8 @@ export default function DataView({ samples, setSamples, summary }) {
     if (!samples?.length) { addToast('No data to export', 'info'); return }
     const rows = samples.map((s) => ({
       location: `${s.state || ''} / ${s.district || ''} / ${s.location || ''}`,
-      latitude: s.coordinates?.coordinates?.[1],
-      longitude: s.coordinates?.coordinates?.[0],
+      latitude: s.latitude,
+      longitude: s.longitude,
       Fe: s.parameters?.Fe,
       As: s.parameters?.As,
       U: s.parameters?.U,
@@ -293,8 +302,8 @@ export default function DataView({ samples, setSamples, summary }) {
     const head = [['Location', 'Lat', 'Lng', 'Fe', 'As', 'U', 'HMPI', 'HEI', 'PLI']]
     const body = samples.map((s) => [
       `${s.state || ''} / ${s.district || ''} / ${s.location || ''}`,
-      s.coordinates?.coordinates?.[1] || '—',
-      s.coordinates?.coordinates?.[0] || '—',
+      s.latitude || '—',
+      s.longitude || '—',
       s.parameters?.Fe || '—',
       s.parameters?.As || '—',
       s.parameters?.U || '—',
@@ -518,7 +527,7 @@ export default function DataView({ samples, setSamples, summary }) {
                 </td>
               </tr>
             ) : (
-              samples.map((s, i) => (
+              visibleSamples.map((s, i) => (
                 <tr key={s._id || i} className="spell-stagger-row">
                   <td>
                     <div className="text-xs">
@@ -526,8 +535,8 @@ export default function DataView({ samples, setSamples, summary }) {
                       <div style={{ color: 'var(--color-text-500)' }}>{s.district ? `${s.state}, ${s.district}` : (s.state || '—')}</div>
                     </div>
                   </td>
-                  <td className="font-mono-nums">{formatNum(s.coordinates?.coordinates?.[1])}</td>
-                  <td className="font-mono-nums">{formatNum(s.coordinates?.coordinates?.[0])}</td>
+                  <td className="font-mono-nums">{formatNum(s.latitude)}</td>
+                  <td className="font-mono-nums">{formatNum(s.longitude)}</td>
                   <td className="font-mono-nums">{formatNum(s.parameters?.Fe)}</td>
                   <td className="font-mono-nums">{formatNum(s.parameters?.As)}</td>
                   <td className="font-mono-nums">{formatNum(s.parameters?.U)}</td>
@@ -542,6 +551,34 @@ export default function DataView({ samples, setSamples, summary }) {
           </tbody>
         </table>
       </div>
+
+      {/* ── Pagination ── */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-4 py-3 glass-card text-xs">
+          <span style={{ color: 'var(--color-text-400)' }}>
+            Showing {((page - 1) * PAGE_SIZE) + 1} to {Math.min(page * PAGE_SIZE, samples.length)} of {samples.length} entries
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              className="btn btn-secondary px-3 py-1"
+              disabled={page === 1}
+              onClick={() => setPage(p => p - 1)}
+            >
+              Previous
+            </button>
+            <span style={{ color: 'var(--color-text-100)' }} className="px-2 font-medium">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              className="btn btn-secondary px-3 py-1"
+              disabled={page === totalPages}
+              onClick={() => setPage(p => p + 1)}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

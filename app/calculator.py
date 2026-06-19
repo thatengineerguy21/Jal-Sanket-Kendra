@@ -323,8 +323,21 @@ def calculate_all_indices(
             "cd": float, "cd_category": str,
             "hei": float, "ehci": float,
             "hmi": float, "pmi": float,
+            "reduced_parameter_set": bool,
+            "missing_parameters": list,
         }
     """
+    std = STANDARDS.get(standard, STANDARDS["BIS"])
+    metals = _resolve_metals(row)
+    
+    expected_metals = set(std.keys())
+    provided_metals = set(metals.keys())
+    missing_metals = list(expected_metals - provided_metals)
+    reduced_parameter_set = len(missing_metals) > 0
+
+    if reduced_parameter_set:
+        logger.warning("Historical index was computed with a reduced parameter set. Missing: %s", missing_metals)
+
     hpi_value, hpi_cat = calculate_hpi(row, standard)
     cd_value, cd_cat = calculate_cd(row, standard)
 
@@ -337,4 +350,6 @@ def calculate_all_indices(
         "ehci": calculate_ehci(row, standard),
         "hmi": calculate_hmi(row, standard),
         "pmi": calculate_pmi(row, standard),
+        "reduced_parameter_set": reduced_parameter_set,
+        "missing_parameters": missing_metals,
     }

@@ -110,11 +110,8 @@ def _parse_bytes(data: bytes, filename: str, content_type: str) -> pd.DataFrame:
             return pd.read_json(io.StringIO(data.decode("utf-8")))
 
         if filename.endswith(".pdf") or content_type in _PDF_TYPES:
-            import tabula
-            tables = tabula.read_pdf(io.BytesIO(data), pages="all", multiple_tables=True)
-            if not tables:
-                raise HTTPException(status_code=400, detail="No data tables found in the PDF.")
-            return tables[0]
+            from app.services.pdf_parser import parse_pdf_bytes
+            return parse_pdf_bytes(data, filename)
 
         if filename.endswith((".xls", ".xlsx")) or content_type in _EXCEL_TYPES:
             return pd.read_excel(io.BytesIO(data))

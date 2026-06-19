@@ -252,7 +252,15 @@ body {
 /* 3. Staggered Row Reveal */
 .spell-stagger-row {
   opacity: 0;
-  animation: slideUpFade 400ms var(--transition-spring) forwards;
+  animation: fadeInUp 400ms var(--transition-spring) forwards;
+}
+.hex-tooltip {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.hex-tooltip::before {
+  display: none !important;
 }
 .spell-stagger-row:nth-child(1) { animation-delay: 50ms; }
 .spell-stagger-row:nth-child(2) { animation-delay: 100ms; }

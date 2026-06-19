@@ -46,7 +46,12 @@ def to_int_or_none(v):
 
 def to_float_or_none(v):
     try:
-        return float(v) if v not in ("", None) else None
+        if v in ("", None):
+            return None
+        val = float(v)
+        if math.isnan(val):
+            return None
+        return val
     except (ValueError, TypeError):
         return None
 
@@ -88,10 +93,21 @@ async def create_upload_file(
         if not state: issues.append("state missing")
         if not district: issues.append("district missing")
         if not location: issues.append("location missing")
-        if lon_val is None: issues.append("longitude missing/invalid")
-        elif not (-180.0 <= lon_val <= 180.0): issues.append("longitude out of range (-180, 180)")
-        if lat_val is None: issues.append("latitude missing/invalid")
-        elif not (-90.0 <= lat_val <= 90.0): issues.append("latitude out of range (-90, 90)")
+        
+        if lon_val is None: 
+            issues.append("longitude missing/invalid")
+            lon_val = 0.0
+        elif not (-180.0 <= lon_val <= 180.0): 
+            issues.append("longitude out of range (-180, 180)")
+            lon_val = 0.0
+            
+        if lat_val is None: 
+            issues.append("latitude missing/invalid")
+            lat_val = 0.0
+        elif not (-90.0 <= lat_val <= 90.0): 
+            issues.append("latitude out of range (-90, 90)")
+            lat_val = 0.0
+            
         if year_val is None: issues.append("year missing/invalid")
         elif not (1900 <= year_val <= 2100): issues.append("year out of range (1900-2100)")
         if ph_val is None: issues.append("pH missing/invalid")
@@ -143,6 +159,11 @@ async def create_upload_file(
 
             if standards["WHO"]["hmpi"] is not None:
                 parameters["hmpi"] = standards["WHO"]["hmpi"]
+
+        # ── Document Reduced Parameter Set ────────────────────────
+        missing_metals = calculation_service.get_missing_metals(metals_mgL, calculation_service.BIS_LIMITS_METALS)
+        if missing_metals:
+            issues.append(f"Historical index was computed with a reduced parameter set (Missing: {', '.join(missing_metals)}).")
 
         sample = models.WaterSample(
             village_code=village_code,
