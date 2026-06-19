@@ -198,7 +198,146 @@ body {
 
 @keyframes pulse-glow {
   0%, 100% { box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.0); }
-  50% { box-shadow: 0 0 20px 4px rgba(20, 184, 166, 0.15); }
+  50% { box-shadow: 0 0 20px 0 rgba(20, 184, 166, 0.4); }
+}
+
+/* ═══════════════════════════════════════════
+   DESIGN SPELLS — Magic Micro-interactions
+   ═══════════════════════════════════════════ */
+
+/* 1. Liquid Ripple Effect */
+.spell-ripple-container {
+  position: relative;
+  overflow: hidden;
+}
+.spell-ripple {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  animation: spellRippleAnim 600ms linear;
+  background-color: rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+}
+@keyframes spellRippleAnim {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* 2. Magnetic Nav Pill */
+.spell-magnetic-wrap {
+  position: relative;
+  display: flex;
+}
+.spell-magnetic-pill {
+  position: absolute;
+  background: rgba(20, 184, 166, 0.15);
+  border: 1px solid rgba(20, 184, 166, 0.3);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-spring);
+  pointer-events: none;
+  z-index: 0;
+}
+.spell-magnetic-item {
+  position: relative;
+  z-index: 1;
+  transition: transform var(--transition-spring), color var(--transition-base);
+}
+.spell-magnetic-item:hover {
+  transform: scale(1.05);
+  color: var(--color-primary-300) !important;
+}
+
+/* 3. Staggered Row Reveal */
+.spell-stagger-row {
+  opacity: 0;
+  animation: slideUpFade 400ms var(--transition-spring) forwards;
+}
+.spell-stagger-row:nth-child(1) { animation-delay: 50ms; }
+.spell-stagger-row:nth-child(2) { animation-delay: 100ms; }
+.spell-stagger-row:nth-child(3) { animation-delay: 150ms; }
+.spell-stagger-row:nth-child(4) { animation-delay: 200ms; }
+.spell-stagger-row:nth-child(5) { animation-delay: 250ms; }
+.spell-stagger-row:nth-child(6) { animation-delay: 300ms; }
+.spell-stagger-row:nth-child(7) { animation-delay: 350ms; }
+.spell-stagger-row:nth-child(8) { animation-delay: 400ms; }
+.spell-stagger-row:nth-child(9) { animation-delay: 450ms; }
+.spell-stagger-row:nth-child(10) { animation-delay: 500ms; }
+.spell-stagger-row:nth-child(n+11) { animation-delay: 550ms; }
+
+/* 4. Magical Glow Border Card */
+.spell-glow-card {
+  position: relative;
+}
+.spell-glow-card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--angle),
+    transparent 20%,
+    var(--color-primary-500) 80%,
+    transparent 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: spellRotateGlow 4s linear infinite;
+  opacity: 0;
+  transition: opacity var(--transition-base);
+  pointer-events: none;
+}
+.spell-glow-card:hover::before {
+  opacity: 1;
+}
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes spellRotateGlow {
+  to { --angle: 360deg; }
+}
+
+/* 5. Spotlight Global Background */
+.spell-spotlight {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(
+    600px circle at var(--mouse-x) var(--mouse-y),
+    rgba(20, 184, 166, 0.05),
+    transparent 40%
+  );
+  transition: opacity var(--transition-base);
+}
+
+/* 6. 3D Tilt Card Base */
+.spell-tilt-card {
+  transform-style: preserve-3d;
+  transform: perspective(1000px);
+  transition: transform 0.1s;
+}
+.spell-tilt-glare {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at var(--glare-x) var(--glare-y),
+    rgba(255, 255, 255, 0.2),
+    transparent 50%
+  );
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--transition-base);
+  border-radius: inherit;
+}
+.spell-tilt-card:hover .spell-tilt-glare {
+  opacity: 1;
 }
 
 @keyframes shimmer {

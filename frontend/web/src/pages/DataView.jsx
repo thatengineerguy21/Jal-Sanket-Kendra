@@ -144,7 +144,7 @@ function StatCard({ icon, label, value, subtitle, color }) {
 
   return (
     <div
-      className="glass-card glass-card-interactive p-5 flex items-start gap-4"
+      className="glass-card glass-card-interactive p-5 flex items-start gap-4 spell-tilt-card spell-glow-card"
       style={{ borderColor: c.border }}
     >
       <div
@@ -519,7 +519,7 @@ export default function DataView({ samples, setSamples, summary }) {
               </tr>
             ) : (
               samples.map((s, i) => (
-                <tr key={s._id || i}>
+                <tr key={s._id || i} className="spell-stagger-row">
                   <td>
                     <div className="text-xs">
                       <div className="font-medium" style={{ color: 'var(--color-text-100)' }}>{s.location || '—'}</div>

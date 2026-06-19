@@ -178,7 +178,7 @@ export default function QuickCalcView() {
 
       {/* ── Input Section ── */}
       <div
-        className="glass-card"
+        className="glass-card spell-glow-card"
         style={{ padding: 'var(--space-6)' }}
       >
         {/* Standard Toggle */}
@@ -301,7 +301,7 @@ export default function QuickCalcView() {
               return (
                 <div
                   key={idx.key}
-                  className="glass-card glass-card-interactive"
+                  className="glass-card glass-card-interactive spell-tilt-card spell-glow-card"
                   style={{
                     padding: 'var(--space-5)',
                     borderColor: c.border,

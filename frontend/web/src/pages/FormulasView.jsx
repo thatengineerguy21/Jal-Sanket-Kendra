@@ -408,7 +408,7 @@ function IndexCard({ index, katexReady }) {
   return (
     <section
       id={index.id}
-      className="glass-card"
+      className="glass-card spell-glow-card"
       style={{
         padding: 'var(--space-6)',
         borderColor: c.border,
@@ -780,7 +780,7 @@ export default function FormulasView() {
           {/* ── Hotspot Risk Prediction ── */}
           <section
             id="hotspot"
-            className="glass-card"
+            className="glass-card spell-glow-card"
             style={{
               padding: 'var(--space-6)',
               scrollMarginTop: '6rem',
@@ -879,7 +879,7 @@ export default function FormulasView() {
           {/* ── Variable Glossary ── */}
           <section
             id="glossary"
-            className="glass-card"
+            className="glass-card spell-glow-card"
             style={{
               padding: 'var(--space-6)',
               scrollMarginTop: '6rem',

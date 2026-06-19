@@ -7,6 +7,7 @@ import AlertsView from './pages/AlertsView.jsx'
 import QuickCalcView from './pages/QuickCalcView.jsx'
 import FormulasView from './pages/FormulasView.jsx'
 import AccessibilityWidget from './components/AccessibilityWidget.jsx'
+import DesignSpells from './components/DesignSpells.jsx'
 
 const API_BASE = '/api/v1'
 
@@ -180,12 +181,12 @@ function NavBar() {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
+          <nav className="hidden md:flex items-center gap-1 spell-magnetic-wrap" aria-label="Main navigation">
             {navLinks.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
-                className="relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium no-underline"
+                className="spell-magnetic-item relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium no-underline"
                 style={{
                   color: isActive(link.to)
                     ? 'var(--color-primary-300)'
@@ -269,6 +270,7 @@ export default function App() {
 
   return (
     <ToastProvider>
+      <DesignSpells />
       <div className="min-h-screen flex flex-col">
         <NavBar />
         <main className={`flex-1 ${isMapPage ? '' : 'max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6'}`}>
