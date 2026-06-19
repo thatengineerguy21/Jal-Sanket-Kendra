@@ -1,36 +1,25 @@
 # app/models.py
 """
 SQLAlchemy ORM models and database session management.
-
-Changes from v1:
-- Removed duplicate imports
-- DATABASE_URL sourced from app.config
-- Cascade delete on WaterSample → PollutionResult
-- Removed dead User model (auth was removed)
-- Added created_at / updated_at timestamps
-- Added __repr__ methods
 """
 
 from __future__ import annotations
-
+import json
 from datetime import datetime, timezone
 
 from sqlalchemy import (
     Column,
     DateTime,
     Float,
-    ForeignKey,
     Integer,
     String,
     Text,
     create_engine,
-    event,
 )
-from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session
+from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
 from app.config import settings
 
-# ── Engine & Session ────────────────────────────────────────────────────
 engine = create_engine(
     settings.DATABASE_URL,
     connect_args={"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {},
@@ -39,67 +28,68 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
-# ── Helpers ─────────────────────────────────────────────────────────────
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-# ── Models ──────────────────────────────────────────────────────────────
 class WaterSample(Base):
-    """Raw data for a single water-quality sampling point."""
+    """Raw data for a single water-quality sampling point (CGWB standard)."""
 
     __tablename__ = "water_samples"
 
     id: int = Column(Integer, primary_key=True, index=True)
-    latitude: float = Column(Float, nullable=False)
-    longitude: float = Column(Float, nullable=False)
+    
+    village_code: str = Column(String, nullable=True)
+    state: str = Column(String, nullable=True)
+    district: str = Column(String, nullable=True)
+    location: str = Column(String, nullable=True)
+    year: int = Column(Integer, nullable=True)
+    source: str = Column(String, nullable=True)
 
-    # Metal concentrations in µg/L
-    arsenic: float = Column(Float, name="As")
-    cadmium: float = Column(Float, name="Cd")
-    lead: float = Column(Float, name="Pb")
-    zinc: float = Column(Float, name="Zn")
+    latitude: float = Column(Float, nullable=True)
+    longitude: float = Column(Float, nullable=True)
 
-    created_at: datetime = Column(DateTime, default=_utcnow)
-    updated_at: datetime = Column(DateTime, default=_utcnow, onupdate=_utcnow)
-
-    # cascade + delete-orphan so deleting a sample removes its result row.
-    result = relationship(
-        "PollutionResult",
-        back_populates="sample",
-        uselist=False,
-        cascade="all, delete-orphan",
-    )
-
-    def __repr__(self) -> str:
-        return (
-            f"<WaterSample id={self.id} lat={self.latitude} lon={self.longitude}>"
-        )
-
-
-class PollutionResult(Base):
-    """Calculated pollution indices for a corresponding water sample."""
-
-    __tablename__ = "pollution_results"
-
-    id: int = Column(Integer, primary_key=True, index=True)
-    sample_id: int = Column(Integer, ForeignKey("water_samples.id"), nullable=False)
-
-    heavy_metal_pollution_index: float = Column(Float, name="HPI")
-    hpi_category: str = Column(String)
-
-    degree_of_contamination: float = Column(Float, name="Cd_value")
-    cd_category: str = Column(String)
+    parameters_json: str = Column(Text, default="{}")
+    standards_json: str = Column(Text, default="{}")
+    validation_issues_json: str = Column(Text, default="[]")
 
     created_at: datetime = Column(DateTime, default=_utcnow)
     updated_at: datetime = Column(DateTime, default=_utcnow, onupdate=_utcnow)
 
-    sample = relationship("WaterSample", back_populates="result")
+    @property
+    def parameters(self) -> dict:
+        if not self.parameters_json:
+            return {}
+        return json.loads(self.parameters_json)
+
+    @parameters.setter
+    def parameters(self, value: dict):
+        self.parameters_json = json.dumps(value)
+
+    @property
+    def standards(self) -> dict:
+        if not self.standards_json:
+            return {}
+        return json.loads(self.standards_json)
+
+    @standards.setter
+    def standards(self, value: dict):
+        self.standards_json = json.dumps(value)
+
+    @property
+    def validation_issues(self) -> list:
+        if not self.validation_issues_json:
+            return []
+        return json.loads(self.validation_issues_json)
+
+    @validation_issues.setter
+    def validation_issues(self, value: list):
+        self.validation_issues_json = json.dumps(value)
 
     def __repr__(self) -> str:
         return (
-            f"<PollutionResult id={self.id} sample_id={self.sample_id} "
-            f"hpi={self.heavy_metal_pollution_index}>"
+            f"<WaterSample id={self.id} location={self.location} "
+            f"year={self.year}>"
         )
 
 
@@ -122,7 +112,6 @@ class AlertConfig(Base):
         )
 
 
-# ── Dependency ──────────────────────────────────────────────────────────
 def get_db():
     """FastAPI dependency – yields a DB session and ensures cleanup."""
     db: Session = SessionLocal()

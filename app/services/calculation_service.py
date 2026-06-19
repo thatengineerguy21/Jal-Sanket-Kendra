@@ -1,129 +1,182 @@
 # app/services/calculation_service.py
 """
-Service layer wrapping calculator functions.
-
-Handles per-row error isolation and structured logging so that route
-handlers stay thin.
+Service layer wrapping calculator functions based on CGWB standard.
 """
 
 from __future__ import annotations
 
 import logging
 from typing import Any, Dict, List, Mapping, Tuple
-
 import pandas as pd
 from sqlalchemy.orm import Session
+from datetime import datetime
 
-from app import calculator, models
+from app import models
 
 logger = logging.getLogger(__name__)
 
+# Constants for Heavy Metals
+WHO_LIMITS_METALS = {
+    "Fe": 0.3,
+    "As": 0.01,
+    "U": 0.03,
+}
 
-def process_samples(df: pd.DataFrame, db: Session) -> List[models.WaterSample]:
+BIS_LIMITS_METALS = {
+    "Fe": 0.3,
+    "As": 0.01,
+    "U": 0.06,
+}
+
+RFD = {
+    "Fe": 0.7,
+    "As": 0.0003,
+    "U": 0.003,
+}
+
+def safe_div(a: float, b: float):
+    try:
+        return a / b if b else None
+    except Exception:
+        return None
+
+def calc_ci(params: Dict[str, float], limits: Dict[str, float]) -> Dict[str, float]:
+    ci: Dict[str, float] = {}
+    for metal, std in limits.items():
+        if metal in params and params[metal] is not None:
+            val = safe_div(params[metal], std)
+            if val is not None:
+                ci[metal] = val
+    return ci
+
+def calc_ehci(ci: Dict[str, float]) -> Dict[str, float]:
+    return {m: v ** 2 for m, v in ci.items()}
+
+def calc_hei(ci: Dict[str, float]):
+    if not ci:
+        return None
+    return sum(ci.values())
+
+def calc_pli(ci: Dict[str, float]):
+    if not ci:
+        return None
+    vals = [v for v in ci.values() if v >= 0]
+    if not vals:
+        return None
+    product = 1.0
+    for v in vals:
+        product *= v
+    if product == 0:
+        return 0.0
+    return product ** (1.0 / len(vals))
+
+def calc_hmpi(params: Dict[str, float], limits: Dict[str, float]):
+    numerator = 0.0
+    denominator = 0.0
+    for metal, std in limits.items():
+        if metal in params and params[metal] is not None and std:
+            C = params[metal]
+            Q = (C / std) * 100.0
+            W = 1.0 / std
+            numerator += W * Q
+            denominator += W
+    if denominator == 0:
+        return None
+    return numerator / denominator
+
+def calc_hi(params: Dict[str, float], rfd: Dict[str, float]):
+    total = 0.0
+    count = 0
+    for metal, R in rfd.items():
+        if metal in params and params[metal] is not None and R:
+            total += params[metal] / R
+            count += 1
+    return total if count else None
+
+def convert_units_for_metals(params: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Iterate over *df*, compute indices, persist rows, return hydrated samples.
-
-    Each row is processed in the same DB transaction.  Any per-row failure
-    is logged and skipped (fail-open per row, not per file).
+    Convert ppb → mg/L for As & U.
+    Fe is assumed to be mg/L (ppm), kept as is.
     """
-    processed: List[models.WaterSample] = []
+    converted = dict(params)
 
-    for _idx, row in df.iterrows():
-        try:
-            sample = _persist_sample(row, db)
-            processed.append(sample)
-        except Exception:
-            logger.exception("Failed to process row %s", _idx)
+    if "As" in converted and converted["As"] is not None:
+        converted["As"] = converted["As"] / 1000.0  # ppb → mg/L
+
+    if "U" in converted and converted["U"] is not None:
+        converted["U"] = converted["U"] / 1000.0  # ppb → mg/L
+
+    return converted
+
+
+def predict_hotspots(rows: List[Mapping]) -> List[Dict[str, Any]]:
+    """
+    Compute per-location pollution risk predictions from uploaded data.
+
+    For each row, extracts lat/lon and metal concentrations (Fe, As, U),
+    computes HMPI against BIS standards, and classifies the risk level.
+
+    Returns a list of dicts matching the ``PredictionResult`` schema:
+    ``{latitude, longitude, risk_score, risk_category}``.
+    """
+    results: List[Dict[str, Any]] = []
+
+    for row in rows:
+        # ── Extract coordinates ────────────────────────────────────
+        raw_lon = row.get("coordinates.coordinates[0]")
+        raw_lat = row.get("coordinates.coordinates[1]")
+
+        if raw_lat is None or raw_lon is None:
             continue
 
-    db.commit()
-
-    for sample in processed:
-        db.refresh(sample)
-
-    return processed
-
-
-def predict_hotspots(df: pd.DataFrame) -> List[Dict[str, Any]]:
-    """
-    Pure-computation prediction — no DB needed.
-
-    Returns a list of dicts compatible with ``PredictionResult``.
-    """
-    permissible = calculator.PERMISSIBLE_VALUES
-    weights: Dict[str, float] = {
-        "arsenic": 0.35,
-        "cadmium": 0.25,
-        "lead": 0.30,
-        "zinc": 0.10,
-    }
-
-    predictions: List[Dict[str, Any]] = []
-    for _, row in df.iterrows():
         try:
-            risk = _compute_risk(row, permissible, weights)
-            risk_score = float(round(1 - (1 / (1 + risk)), 3))
-            category = _risk_category(risk_score)
-            predictions.append(
-                {
-                    "latitude": float(row["latitude"]),
-                    "longitude": float(row["longitude"]),
-                    "risk_score": risk_score,
-                    "risk_category": category,
-                }
-            )
-        except Exception:
-            logger.warning("Skipping unparseable prediction row", exc_info=True)
+            lat = float(raw_lat)
+            lon = float(raw_lon)
+        except (ValueError, TypeError):
+            logger.warning("Skipping row with invalid coordinates: lat=%s, lon=%s", raw_lat, raw_lon)
             continue
 
-    return predictions
+        # ── Extract metal concentrations ───────────────────────────
+        metal_raw: Dict[str, float] = {}
+        for key in ("Fe", "As", "U"):
+            param_key = f"parameters.{key}"
+            val = row.get(param_key)
+            if val is not None:
+                try:
+                    metal_raw[key] = float(val)
+                except (ValueError, TypeError):
+                    pass
 
+        metals_mgL = convert_units_for_metals(metal_raw)
 
-# ── Internal helpers ────────────────────────────────────────────────────
-def _persist_sample(row: Mapping[str, Any], db: Session) -> models.WaterSample:
-    """Create WaterSample + PollutionResult for a single row."""
-    sample = models.WaterSample(
-        latitude=row["latitude"],
-        longitude=row["longitude"],
-        arsenic=row.get("arsenic"),
-        cadmium=row.get("cadmium"),
-        lead=row.get("lead"),
-        zinc=row.get("zinc"),
-    )
-    db.add(sample)
-    db.flush()
+        if not metals_mgL:
+            results.append({
+                "latitude": lat,
+                "longitude": lon,
+                "risk_score": 0.0,
+                "risk_category": "Unknown",
+            })
+            continue
 
-    hpi_value, hpi_cat = calculator.calculate_hpi(row)
-    cd_value, cd_cat = calculator.calculate_degree_of_contamination(row)
+        # ── Compute risk score via HMPI ────────────────────────────
+        hmpi = calc_hmpi(metals_mgL, BIS_LIMITS_METALS)
+        risk_score = round(hmpi, 2) if hmpi is not None else 0.0
 
-    result = models.PollutionResult(
-        sample_id=sample.id,
-        heavy_metal_pollution_index=hpi_value,
-        hpi_category=hpi_cat,
-        degree_of_contamination=cd_value,
-        cd_category=cd_cat,
-    )
-    db.add(result)
-    return sample
+        if risk_score < 25:
+            category = "Low"
+        elif risk_score < 50:
+            category = "Moderate"
+        elif risk_score < 75:
+            category = "High"
+        else:
+            category = "Critical"
 
+        results.append({
+            "latitude": lat,
+            "longitude": lon,
+            "risk_score": risk_score,
+            "risk_category": category,
+        })
 
-def _compute_risk(
-    row: Mapping[str, Any],
-    permissible: Dict[str, int],
-    weights: Dict[str, float],
-) -> float:
-    """Weighted contamination-factor sum (sigmoid input)."""
-    risk: float = 0.0
-    for metal, perm in permissible.items():
-        val = row.get(metal)
-        if val is not None and pd.notna(val):
-            risk += weights.get(metal, 0) * (float(val) / perm)
-    return risk
-
-
-def _risk_category(score: float) -> str:
-    if score < 0.33:
-        return "Low risk"
-    elif score < 0.66:
-        return "Moderate risk"
-    return "High risk"
+    logger.info("Predicted %d hotspots from %d rows", len(results), len(rows))
+    return results

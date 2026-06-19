@@ -12,16 +12,17 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.routes import upload, predict, indices, alerts, health
+from app.routes import upload, predict, indices, alerts, health, quickcalc
 
 # Re-export schemas that tests or external code may have imported from here.
 from app.schemas import (  # noqa: F401
-    CalculationResult,
     SampleResponse,
     IndicesSummary,
     PredictionResult,
     AlertConfigDTO,
     AlertSendRequest,
+    QuickCalcRequest,
+    QuickCalcResponse,
 )
 
 router = APIRouter()
@@ -30,3 +31,4 @@ router.include_router(predict.router)
 router.include_router(indices.router)
 router.include_router(alerts.router)
 router.include_router(health.router)
+router.include_router(quickcalc.router)

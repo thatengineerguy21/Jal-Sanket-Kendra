@@ -25,6 +25,26 @@ const icons = {
       <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
     </svg>
   ),
+  hei: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+    </svg>
+  ),
+  ehci: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    </svg>
+  ),
+  hmi: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+  ),
+  pmi: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/>
+    </svg>
+  ),
   upload: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
@@ -55,7 +75,37 @@ const icons = {
       <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/>
     </svg>
   ),
+  download: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
+  )
 }
+
+/* ═══════════════════════════════════════════
+   Constants
+   ═══════════════════════════════════════════ */
+const REQUIRED_COLUMNS = [
+  "village_code", "state", "district", "location", "year",
+  "coordinates.coordinates[0]", "coordinates.coordinates[1]",
+  "parameters.pH", "parameters.EC", "parameters.CO3", "parameters.HCO3",
+  "parameters.Cl", "parameters.F", "parameters.SO4", "parameters.NO3",
+  "parameters.total_hardness", "parameters.Ca", "parameters.Mg", "parameters.Na",
+  "parameters.K", "parameters.Fe", "parameters.U", "parameters.As",
+  "source"
+]
+
+const COLUMNS = [
+  { key: 'location', label: 'Location', tip: 'State / District / Village' },
+  { key: 'latitude', label: 'Lat', tip: 'Latitude coordinate' },
+  { key: 'longitude', label: 'Lng', tip: 'Longitude coordinate' },
+  { key: 'fe', label: 'Fe', tip: 'Iron (mg/L)' },
+  { key: 'as', label: 'As', tip: 'Arsenic (mg/L)' },
+  { key: 'u', label: 'U', tip: 'Uranium (mg/L)' },
+  { key: 'hmpi', label: 'HMPI', tip: 'Heavy Metal Pollution Index' },
+  { key: 'hei', label: 'HEI', tip: 'Heavy Metal Evaluation Index' },
+  { key: 'pli', label: 'PLI', tip: 'Pollution Load Index' },
+]
 
 /* ═══════════════════════════════════════════
    Category Badge
@@ -85,6 +135,10 @@ function StatCard({ icon, label, value, subtitle, color }) {
     cyan: { bg: 'rgba(6, 182, 212, 0.08)', border: 'rgba(6, 182, 212, 0.2)', text: 'var(--color-cyan-400)' },
     amber: { bg: 'rgba(251, 191, 36, 0.08)', border: 'rgba(251, 191, 36, 0.2)', text: 'var(--color-warning-400)' },
     teal: { bg: 'rgba(20, 184, 166, 0.08)', border: 'rgba(20, 184, 166, 0.2)', text: 'var(--color-primary-400)' },
+    blue: { bg: 'rgba(59, 130, 246, 0.08)', border: 'rgba(59, 130, 246, 0.2)', text: 'var(--color-info-400)' },
+    purple: { bg: 'rgba(168, 85, 247, 0.08)', border: 'rgba(168, 85, 247, 0.2)', text: '#c084fc' },
+    rose: { bg: 'rgba(244, 63, 94, 0.08)', border: 'rgba(244, 63, 94, 0.2)', text: 'var(--color-danger-400)' },
+    emerald: { bg: 'rgba(34, 197, 94, 0.08)', border: 'rgba(34, 197, 94, 0.2)', text: 'var(--color-success-400)' },
   }
   const c = colorMap[color] || colorMap.cyan
 
@@ -117,37 +171,24 @@ function StatCard({ icon, label, value, subtitle, color }) {
 }
 
 /* ═══════════════════════════════════════════
-   Column Definitions
-   ═══════════════════════════════════════════ */
-const COLUMNS = [
-  { key: 'latitude', label: 'Lat', tip: 'Latitude coordinate' },
-  { key: 'longitude', label: 'Lng', tip: 'Longitude coordinate' },
-  { key: 'arsenic', label: 'As', tip: 'Arsenic (μg/L)' },
-  { key: 'cadmium', label: 'Cd', tip: 'Cadmium (μg/L)' },
-  { key: 'lead', label: 'Pb', tip: 'Lead (μg/L)' },
-  { key: 'zinc', label: 'Zn', tip: 'Zinc (μg/L)' },
-  { key: 'hpi', label: 'HPI', tip: 'Heavy Metal Pollution Index' },
-  { key: 'hpi_cat', label: 'HPI Category', tip: 'Pollution severity level' },
-  { key: 'cd_val', label: 'Cd Index', tip: 'Degree of Contamination' },
-  { key: 'cd_cat', label: 'Cd Category', tip: 'Contamination severity' },
-]
-
-/* ═══════════════════════════════════════════
    DataView Component
    ═══════════════════════════════════════════ */
 export default function DataView({ samples, setSamples, summary }) {
   const [busy, setBusy] = useState(false)
   const [dragOver, setDragOver] = useState(false)
+  const [standard, setStandard] = useState('BIS')
   const fileRef = useRef(null)
   const addToast = useToast()
 
   const load = async () => {
     try {
-      const res = await fetch(API('/api/v1/datasets/'))
-      const data = await res.json()
-      setSamples(data)
+      const res = await fetch(API('/api/v1/datasets/')) // Fixed endpoint
+      if (res.ok) {
+        const data = await res.json()
+        setSamples(Array.isArray(data) ? data : (data.items || []))
+      }
     } catch (e) {
-      addToast('Failed to load datasets', 'error')
+      console.error(e)
     }
   }
 
@@ -164,14 +205,17 @@ export default function DataView({ samples, setSamples, summary }) {
     fd.append('file', file, file.name)
     setBusy(true)
     try {
-      const res = await fetch(API('/api/v1/upload-and-calculate/'), {
+      const res = await fetch(API(`/api/v1/upload-and-calculate/`), {
         method: 'POST',
         body: fd,
       })
-      if (!res.ok) throw new Error(await res.text())
+      if (!res.ok) {
+        const errObj = await res.json()
+        throw new Error(errObj.detail || await res.text())
+      }
       const data = await res.json()
-      setSamples(data)
-      addToast(`Successfully processed ${data.length} samples`, 'success')
+      addToast(`Upload successful: ${data.rows_inserted} inserted.`, 'success')
+      await load() // Refresh data table
     } catch (err) {
       addToast(String(err), 'error')
     } finally {
@@ -201,19 +245,30 @@ export default function DataView({ samples, setSamples, summary }) {
     setDragOver(false)
   }, [])
 
+  const downloadTemplate = () => {
+    const csv = Papa.unparse([REQUIRED_COLUMNS.reduce((acc, col) => ({ ...acc, [col]: '' }), {})])
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'cgwb_upload_template.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+    addToast('Template downloaded', 'success')
+  }
+
   const exportCSV = () => {
     if (!samples?.length) { addToast('No data to export', 'info'); return }
     const rows = samples.map((s) => ({
-      latitude: s.latitude,
-      longitude: s.longitude,
-      arsenic: s.arsenic,
-      cadmium: s.cadmium,
-      lead: s.lead,
-      zinc: s.zinc,
-      HPI: s.result?.heavy_metal_pollution_index,
-      HPI_Category: s.result?.hpi_category,
-      Cd: s.result?.degree_of_contamination,
-      Cd_Category: s.result?.cd_category,
+      location: `${s.state || ''} / ${s.district || ''} / ${s.location || ''}`,
+      latitude: s.coordinates?.coordinates?.[1],
+      longitude: s.coordinates?.coordinates?.[0],
+      Fe: s.parameters?.Fe,
+      As: s.parameters?.As,
+      U: s.parameters?.U,
+      HMPI: s.standards?.[standard]?.hmpi,
+      HEI: s.standards?.[standard]?.hei,
+      PLI: s.standards?.[standard]?.pli,
     }))
     const csv = Papa.unparse(rows)
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
@@ -235,13 +290,17 @@ export default function DataView({ samples, setSamples, summary }) {
     doc.setFontSize(10)
     doc.setFont('helvetica', 'normal')
     doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 22)
-    const head = [['Lat', 'Lng', 'As', 'Cd', 'Pb', 'Zn', 'HPI', 'HPI Cat', 'Cd Index', 'Cd Cat']]
+    const head = [['Location', 'Lat', 'Lng', 'Fe', 'As', 'U', 'HMPI', 'HEI', 'PLI']]
     const body = samples.map((s) => [
-      s.latitude, s.longitude, s.arsenic, s.cadmium, s.lead, s.zinc,
-      s.result?.heavy_metal_pollution_index,
-      s.result?.hpi_category,
-      s.result?.degree_of_contamination,
-      s.result?.cd_category,
+      `${s.state || ''} / ${s.district || ''} / ${s.location || ''}`,
+      s.coordinates?.coordinates?.[1] || '—',
+      s.coordinates?.coordinates?.[0] || '—',
+      s.parameters?.Fe || '—',
+      s.parameters?.As || '—',
+      s.parameters?.U || '—',
+      s.standards?.[standard]?.hmpi?.toFixed(2) || '—',
+      s.standards?.[standard]?.hei?.toFixed(2) || '—',
+      s.standards?.[standard]?.pli?.toFixed(2) || '—',
     ])
     autoTable(doc, {
       head,
@@ -255,7 +314,7 @@ export default function DataView({ samples, setSamples, summary }) {
     addToast('PDF exported successfully', 'success')
   }
 
-  const formatNum = (v) => (v != null && !isNaN(v) ? Number(v).toFixed(2) : '—')
+  const formatNum = (v) => (v != null && !isNaN(v) ? Number(v).toFixed(3) : '—')
 
   return (
     <div className="space-y-6">
@@ -270,80 +329,138 @@ export default function DataView({ samples, setSamples, summary }) {
       </div>
 
       {/* ── Summary Stats ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 stagger-children">
-        <StatCard
-          icon={icons.samples}
-          label="Total Samples"
-          value={summary?.count ?? 0}
-          subtitle="Collected data points"
-          color="cyan"
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger-children">
         <StatCard
           icon={icons.hpi}
-          label="Avg HPI"
-          value={summary?.avg_hpi != null ? Number(summary.avg_hpi).toFixed(2) : '—'}
+          label="Avg HMPI"
+          value={summary?.avg_hmpi != null ? Number(summary.avg_hmpi).toFixed(2) : '—'}
           subtitle="Heavy Metal Pollution Index"
-          color="amber"
+          color="teal"
+        />
+        <StatCard
+          icon={icons.hei}
+          label="Avg HEI"
+          value={summary?.avg_hei != null ? Number(summary.avg_hei).toFixed(2) : '—'}
+          subtitle="Heavy Metal Evaluation Index"
+          color="blue"
         />
         <StatCard
           icon={icons.cd}
-          label="Avg Cd Index"
-          value={summary?.avg_cd != null ? Number(summary.avg_cd).toFixed(2) : '—'}
-          subtitle="Degree of Contamination"
-          color="teal"
+          label="Avg PLI"
+          value={summary?.avg_pli != null ? Number(summary.avg_pli).toFixed(2) : '—'}
+          subtitle="Pollution Load Index"
+          color="amber"
         />
       </div>
 
-      {/* ── Upload Zone ── */}
-      <div
-        className={`upload-zone ${dragOver ? 'drag-over' : ''}`}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onClick={() => fileRef.current?.click()}
-        role="button"
-        tabIndex={0}
-        aria-label="Upload data file"
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileRef.current?.click() }}
-      >
-        <form onSubmit={upload} onClick={(e) => e.stopPropagation()}>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".csv,.json,.pdf,.xlsx,.xls"
-            className="hidden"
-            aria-label="Choose file to upload"
-            onChange={(e) => {
-              if (e.target.files?.[0]) processUpload(e.target.files[0])
-            }}
-          />
-        </form>
-        <div className="flex flex-col items-center gap-3">
-          <div style={{ color: dragOver ? 'var(--color-primary-400)' : 'var(--color-text-500)' }}>
-            {icons.dragFile}
+      {/* ── Upload & Template Section ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div
+          className={`upload-zone h-full ${dragOver ? 'drag-over' : ''}`}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onClick={() => fileRef.current?.click()}
+          role="button"
+          tabIndex={0}
+          aria-label="Upload data file"
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileRef.current?.click() }}
+        >
+          <form onSubmit={upload} onClick={(e) => e.stopPropagation()}>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".csv,.json,.xlsx,.xls"
+              className="hidden"
+              aria-label="Choose file to upload"
+              onChange={(e) => {
+                if (e.target.files?.[0]) processUpload(e.target.files[0])
+              }}
+            />
+          </form>
+          <div className="flex flex-col items-center justify-center gap-3 h-full min-h-[200px]">
+            <div style={{ color: dragOver ? 'var(--color-primary-400)' : 'var(--color-text-500)' }}>
+              {icons.dragFile}
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-medium" style={{ color: 'var(--color-text-300)' }}>
+                {busy ? (
+                  <span className="flex items-center gap-2">
+                    <span className="spinner" /> Processing...
+                  </span>
+                ) : (
+                  <>
+                    <span style={{ color: 'var(--color-primary-400)' }}>Click to upload</span>
+                    {' '}or drag and drop
+                  </>
+                )}
+              </p>
+              <p className="text-xs mt-1" style={{ color: 'var(--color-text-500)' }}>
+                CSV, JSON, Excel files supported
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium" style={{ color: 'var(--color-text-300)' }}>
-              {busy ? (
-                <span className="flex items-center gap-2">
-                  <span className="spinner" /> Processing...
+        </div>
+
+        {/* Dataset Structure / Template Preview */}
+        <div className="glass-card p-5 flex flex-col">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold" style={{ color: 'var(--color-text-100)' }}>Dataset Structure</h3>
+            <button
+              className="btn btn-secondary text-xs py-1"
+              onClick={downloadTemplate}
+              aria-label="Download Sample CSV"
+            >
+              {icons.download}
+              <span>Download Sample CSV</span>
+            </button>
+          </div>
+          <p className="text-xs mb-3" style={{ color: 'var(--color-text-400)' }}>
+            The backend now expects the CGWB format with {REQUIRED_COLUMNS.length} specific columns. 
+            Ensure your file contains these exact headers:
+          </p>
+          <div className="flex-1 overflow-auto p-3 rounded" style={{ background: 'rgba(0,0,0,0.2)' }}>
+            <div className="flex flex-wrap gap-2">
+              {REQUIRED_COLUMNS.map((col) => (
+                <span key={col} className="px-2 py-1 text-[10px] font-mono rounded" style={{ background: 'rgba(255,255,255,0.1)', color: 'var(--color-text-300)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  {col}
                 </span>
-              ) : (
-                <>
-                  <span style={{ color: 'var(--color-primary-400)' }}>Click to upload</span>
-                  {' '}or drag and drop
-                </>
-              )}
-            </p>
-            <p className="text-xs mt-1" style={{ color: 'var(--color-text-500)' }}>
-              CSV, JSON, PDF, Excel files supported
-            </p>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
       {/* ── Toolbar ── */}
       <div className="flex flex-wrap items-center gap-2">
+        <div style={{
+          display: 'flex',
+          background: 'rgba(255,255,255,0.05)',
+          borderRadius: '8px',
+          padding: '4px',
+          marginRight: '8px'
+        }}>
+          {['BIS', 'WHO'].map(std => (
+            <button
+              key={std}
+              type="button"
+              onClick={() => setStandard(std)}
+              style={{
+                padding: '4px 12px',
+                borderRadius: '6px',
+                fontSize: '0.8rem',
+                fontWeight: 500,
+                cursor: 'pointer',
+                background: standard === std ? 'var(--color-primary-500)' : 'transparent',
+                color: standard === std ? '#fff' : 'var(--color-text-400)',
+                transition: 'all 0.2s',
+                border: 'none',
+              }}
+            >
+              {std} Standard
+            </button>
+          ))}
+        </div>
         <button
           className="btn btn-secondary"
           onClick={load}
@@ -402,21 +519,23 @@ export default function DataView({ samples, setSamples, summary }) {
               </tr>
             ) : (
               samples.map((s, i) => (
-                <tr key={s.id || i}>
-                  <td className="font-mono-nums">{formatNum(s.latitude)}</td>
-                  <td className="font-mono-nums">{formatNum(s.longitude)}</td>
-                  <td className="font-mono-nums">{formatNum(s.arsenic)}</td>
-                  <td className="font-mono-nums">{formatNum(s.cadmium)}</td>
-                  <td className="font-mono-nums">{formatNum(s.lead)}</td>
-                  <td className="font-mono-nums">{formatNum(s.zinc)}</td>
-                  <td className="font-mono-nums" style={{ fontWeight: 600 }}>
-                    {formatNum(s.result?.heavy_metal_pollution_index)}
+                <tr key={s._id || i}>
+                  <td>
+                    <div className="text-xs">
+                      <div className="font-medium" style={{ color: 'var(--color-text-100)' }}>{s.location || '—'}</div>
+                      <div style={{ color: 'var(--color-text-500)' }}>{s.district ? `${s.state}, ${s.district}` : (s.state || '—')}</div>
+                    </div>
                   </td>
-                  <td><CategoryBadge category={s.result?.hpi_category} /></td>
+                  <td className="font-mono-nums">{formatNum(s.coordinates?.coordinates?.[1])}</td>
+                  <td className="font-mono-nums">{formatNum(s.coordinates?.coordinates?.[0])}</td>
+                  <td className="font-mono-nums">{formatNum(s.parameters?.Fe)}</td>
+                  <td className="font-mono-nums">{formatNum(s.parameters?.As)}</td>
+                  <td className="font-mono-nums">{formatNum(s.parameters?.U)}</td>
                   <td className="font-mono-nums" style={{ fontWeight: 600 }}>
-                    {formatNum(s.result?.degree_of_contamination)}
+                    {formatNum(s.standards?.[standard]?.hmpi)}
                   </td>
-                  <td><CategoryBadge category={s.result?.cd_category} /></td>
+                  <td className="font-mono-nums">{formatNum(s.standards?.[standard]?.hei)}</td>
+                  <td className="font-mono-nums">{formatNum(s.standards?.[standard]?.pli)}</td>
                 </tr>
               ))
             )}

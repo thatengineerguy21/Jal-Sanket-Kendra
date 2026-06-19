@@ -18,23 +18,46 @@ router = APIRouter()
 
 @router.get("/indices/", response_model=IndicesSummary)
 async def indices_summary(db: Session = Depends(models.get_db)) -> IndicesSummary:
-    """Aggregate HPI and Cd averages across all stored results."""
-    samples = db.query(models.PollutionResult).all()
+    """Aggregate averages for indices across all stored results."""
+    samples = db.query(models.WaterSample).all()
     if not samples:
-        return IndicesSummary(count=0, avg_hpi=0.0, avg_cd=0.0)
-    avg_hpi = sum(s.heavy_metal_pollution_index or 0 for s in samples) / len(samples)
-    avg_cd = sum(s.degree_of_contamination or 0 for s in samples) / len(samples)
+        return IndicesSummary(
+            count=0, avg_hmpi=0.0, avg_pli=0.0,
+            avg_hei=0.0, avg_ehci=0.0, avg_hmi=0.0, avg_pmi=0.0,
+        )
+
+    n = len(samples)
+    def get_index(s, index_name, default_std="BIS"):
+        std_dict = s.standards.get(default_std)
+        if isinstance(std_dict, dict):
+            val = std_dict.get(index_name)
+            if val is None:
+                return 0.0
+            if isinstance(val, dict):
+                return sum(val.values()) if val else 0.0
+            return float(val)
+        return 0.0
+
+    avg_hmpi = sum(get_index(s, 'hmpi') for s in samples) / n
+    avg_hei = sum(get_index(s, 'hei') for s in samples) / n
+    avg_pli = sum(get_index(s, 'pli') for s in samples) / n
+    avg_ehci = sum(get_index(s, 'ehci') for s in samples) / n
+    avg_hmi = sum(get_index(s, 'hmi') for s in samples) / n
+    avg_pmi = sum(get_index(s, 'pmi') for s in samples) / n
+
     return IndicesSummary(
-        count=len(samples),
-        avg_hpi=round(avg_hpi, 3),
-        avg_cd=round(avg_cd, 3),
+        count=n,
+        avg_hmpi=round(avg_hmpi, 3),
+        avg_pli=round(avg_pli, 3),
+        avg_hei=round(avg_hei, 3),
+        avg_ehci=round(avg_ehci, 3),
+        avg_hmi=round(avg_hmi, 3),
+        avg_pmi=round(avg_pmi, 3),
     )
 
 
 @router.get("/datasets/", response_model=List[SampleResponse])
 async def list_datasets(db: Session = Depends(models.get_db)) -> list:
-    """Return all stored water-sample records with their pollution results."""
+    """Return all stored water-sample records."""
     samples = db.query(models.WaterSample).all()
-    for s in samples:
-        _ = s.result  # force-load the lazy relationship
     return samples

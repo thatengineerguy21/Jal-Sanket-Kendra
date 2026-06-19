@@ -4,6 +4,9 @@ import DataView from './pages/DataView.jsx'
 import MapView from './pages/MapView.jsx'
 import PredictView from './pages/PredictView.jsx'
 import AlertsView from './pages/AlertsView.jsx'
+import QuickCalcView from './pages/QuickCalcView.jsx'
+import FormulasView from './pages/FormulasView.jsx'
+import AccessibilityWidget from './components/AccessibilityWidget.jsx'
 
 const API_BASE = '/api/v1'
 
@@ -89,6 +92,16 @@ const icons = {
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
     </svg>
   ),
+  calculator: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="8" y2="10.01"/><line x1="12" y1="10" x2="12" y2="10.01"/><line x1="16" y1="10" x2="16" y2="10.01"/><line x1="8" y1="14" x2="8" y2="14.01"/><line x1="12" y1="14" x2="12" y2="14.01"/><line x1="16" y1="14" x2="16" y2="14.01"/><line x1="8" y1="18" x2="16" y2="18"/>
+    </svg>
+  ),
+  formulas: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
+    </svg>
+  ),
   menu: (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
@@ -106,13 +119,14 @@ const icons = {
    ═══════════════════════════════════════════ */
 function NavBar() {
   const location = useLocation()
-  const [mobileOpen, setMobileOpen] = useState(false)
 
   const navLinks = [
     { to: '/data', label: 'Dashboard', icon: icons.data },
     { to: '/map', label: 'Map', icon: icons.map },
     { to: '/predict', label: 'Predict', icon: icons.predict },
     { to: '/alerts', label: 'Alerts', icon: icons.alert },
+    { to: '/calculator', label: 'Calculator', icon: icons.calculator },
+    { to: '/formulas', label: 'Formulas', icon: icons.formulas },
   ]
 
   const isActive = (path) => {
@@ -207,52 +221,8 @@ function NavBar() {
             ))}
           </nav>
 
-          {/* Mobile Hamburger */}
-          <button
-            className="md:hidden btn btn-ghost p-2"
-            onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
-            aria-expanded={mobileOpen}
-          >
-            {mobileOpen ? icons.close : icons.menu}
-          </button>
         </div>
       </div>
-
-      {/* Mobile Nav Dropdown */}
-      {mobileOpen && (
-        <nav
-          className="md:hidden animate-slide-down"
-          style={{
-            borderTop: '1px solid var(--glass-border)',
-            background: 'var(--glass-bg-strong)',
-            backdropFilter: `blur(var(--glass-blur-strong))`,
-          }}
-          aria-label="Mobile navigation"
-        >
-          <div className="px-4 py-3 space-y-1">
-            {navLinks.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium no-underline"
-                style={{
-                  color: isActive(link.to)
-                    ? 'var(--color-primary-300)'
-                    : 'var(--color-text-400)',
-                  background: isActive(link.to)
-                    ? 'rgba(20, 184, 166, 0.1)'
-                    : 'transparent',
-                }}
-                onClick={() => setMobileOpen(false)}
-              >
-                {link.icon}
-                {link.label}
-              </Link>
-            ))}
-          </div>
-        </nav>
-      )}
     </header>
   )
 }
@@ -324,11 +294,20 @@ export default function App() {
                 path="/alerts"
                 element={<AlertsView />}
               />
+              <Route
+                path="/calculator"
+                element={<QuickCalcView />}
+              />
+              <Route
+                path="/formulas"
+                element={<FormulasView />}
+              />
             </Routes>
           </div>
         </main>
         {!isMapPage && <Footer />}
       </div>
+      <AccessibilityWidget />
     </ToastProvider>
   )
 }

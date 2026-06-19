@@ -250,6 +250,9 @@ export default function AlertsView() {
             <h3 className="text-sm font-semibold" style={{ color: 'var(--color-info-400)' }}>
               Email Alerts
             </h3>
+            <span style={{ fontSize: '0.7rem', padding: '2px 6px', background: 'rgba(251, 191, 36, 0.15)', color: 'var(--color-warning-400)', borderRadius: '4px', marginLeft: 'auto', fontWeight: 600 }}>
+              🚧 Under Construction
+            </span>
           </div>
           <div>
             <label
@@ -295,6 +298,9 @@ export default function AlertsView() {
             <h3 className="text-sm font-semibold" style={{ color: 'var(--color-success-400)' }}>
               SMS Alerts
             </h3>
+            <span style={{ fontSize: '0.7rem', padding: '2px 6px', background: 'rgba(251, 191, 36, 0.15)', color: 'var(--color-warning-400)', borderRadius: '4px', marginLeft: 'auto', fontWeight: 600 }}>
+              🚧 Under Construction
+            </span>
           </div>
           <div>
             <label

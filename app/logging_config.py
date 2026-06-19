@@ -10,9 +10,11 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sys
 from contextvars import ContextVar
 from datetime import datetime, timezone
+from logging.handlers import RotatingFileHandler
 from typing import Optional
 
 from app.config import settings
@@ -51,16 +53,31 @@ class _DevFormatter(logging.Formatter):
 
 def setup_logging() -> None:
     """Call once at startup to wire formatters and handlers."""
-    handler = logging.StreamHandler(sys.stdout)
+    # Ensure logs directory exists
+    os.makedirs("logs", exist_ok=True)
+    
+    console_handler = logging.StreamHandler(sys.stdout)
+    file_handler = RotatingFileHandler("logs/app.log", maxBytes=10485760, backupCount=5, encoding="utf-8")
+    
     if settings.APP_ENV == "production":
-        handler.setFormatter(_JSONFormatter())
+        formatter = _JSONFormatter()
     else:
-        handler.setFormatter(_DevFormatter(fmt=_DevFormatter.fmt))
+        formatter = _DevFormatter(fmt=_DevFormatter.fmt)
+        
+    console_handler.setFormatter(formatter)
+    file_handler.setFormatter(formatter)
 
     root = logging.getLogger()
     root.handlers.clear()
-    root.addHandler(handler)
+    root.addHandler(console_handler)
+    root.addHandler(file_handler)
     root.setLevel(settings.LOG_LEVEL.upper())
+
+    # Ensure uvicorn logs propagate to our root logger
+    for logger_name in ("uvicorn", "uvicorn.error", "uvicorn.access", "fastapi"):
+        l = logging.getLogger(logger_name)
+        l.handlers.clear()
+        l.propagate = True
 
     # Silence noisy third-party loggers
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)

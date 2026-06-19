@@ -1,0 +1,5 @@
+village_code,state,district,location,year,coordinates.coordinates[0],coordinates.coordinates[1],parameters.pH,parameters.EC,parameters.CO3,parameters.HCO3,parameters.Cl,parameters.F,parameters.SO4,parameters.NO3,parameters.total_hardness,parameters.Ca,parameters.Mg,parameters.Na,parameters.K,parameters.Fe,parameters.U,parameters.As,source
+V101,Karnataka,Bangalore Urban,Kengeri,2023,77.48,12.90,7.2,1.5,0,120,45,0.5,20,5,150,40,12,30,5,0.35,0.04,0.015,lab_A
+V102,Karnataka,Bangalore Urban,Yelahanka,2023,77.60,13.10,6.8,1.2,0,100,35,0.3,15,3,120,35,8,25,4,0.15,0.01,0.005,lab_A
+V201,West Bengal,Nadia,Kalyani,2023,88.45,22.98,7.5,2.1,0,200,80,0.8,40,12,250,60,24,80,15,1.20,0.02,0.080,lab_B
+V301,Punjab,Malwa,Bathinda,2023,74.95,30.21,7.8,2.5,0,250,110,1.2,80,25,300,80,24,120,20,0.50,0.08,0.025,lab_C

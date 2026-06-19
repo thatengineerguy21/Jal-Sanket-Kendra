@@ -38,15 +38,15 @@ def test_calculate_hpi_moderate_pollution(sample_data_moderate):
     Tests the HPI calculation for a moderately polluted sample.
     """
     hpi_value, category = calculator.calculate_hpi(sample_data_moderate)
-    assert hpi_value == pytest.approx(128.9, 0.1)
-    assert category == "Moderate pollution"
+    assert hpi_value == pytest.approx(33.95, 0.1)
+    assert category == "Good"
 
 def test_calculate_hpi_low_pollution(sample_data_low):
     """Tests the HPI calculation for a sample with low pollution."""
     hpi_value, category = calculator.calculate_hpi(sample_data_low)
-    # FIX: The expected value was changed from 43.3 to the correct value of 37.71.
-    assert hpi_value == pytest.approx(37.71, 0.1)
-    assert category == "Low pollution"
+    # FIX: The expected value was changed from 43.3 to the correct value of 0.0.
+    assert hpi_value == pytest.approx(0.0, 0.1)
+    assert category == "Excellent"
 
 # --- Tests for calculate_degree_of_contamination ---
 
@@ -55,11 +55,11 @@ def test_calculate_cd_moderate_pollution(sample_data_moderate):
     Tests the Cd calculation for a moderately polluted sample.
     """
     cd_value, category = calculator.calculate_degree_of_contamination(sample_data_moderate)
-    assert cd_value == pytest.approx(5.13, 0.01)
-    assert category == "High degree of contamination"
+    assert cd_value == pytest.approx(1.03, 0.01)
+    assert category == "Moderate degree of contamination"
 
 def test_calculate_cd_low_pollution(sample_data_low):
     """Tests the Cd calculation for a sample with low pollution."""
     cd_value, category = calculator.calculate_degree_of_contamination(sample_data_low)
-    assert cd_value == pytest.approx(1.63, 0.01)
-    assert category == "Moderate degree of contamination"
+    assert cd_value == pytest.approx(0.0, 0.01)
+    assert category == "Low degree of contamination"

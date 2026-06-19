@@ -600,3 +600,12 @@ body {
 .font-mono-nums {
   font-variant-numeric: tabular-nums;
 }
+
+/* ═══════════════════════════════════════════
+   Accessibility Overrides
+   ═══════════════════════════════════════════ */
+body.high-contrast { filter: contrast(1.5); }
+body.grayscale { filter: grayscale(1); }
+body.invert { filter: invert(1) hue-rotate(180deg); }
+body.high-contrast.grayscale { filter: contrast(1.5) grayscale(1); }
+
