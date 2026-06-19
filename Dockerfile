@@ -34,20 +34,14 @@ RUN groupadd -g 1001 appgroup && \
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         curl \
+        default-jre-headless \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 # Install Python dependencies first (layer caching — deps change rarely)
-# Extracted from pyproject.toml to enable proper Docker layer caching
-RUN pip install --no-cache-dir \
-        "fastapi>=0.128.0" \
-        "uvicorn>=0.40.0" \
-        "sqlalchemy>=2.0.46" \
-        "pandas>=3.0.0" \
-        "pydantic>=2.12.5" \
-        "python-multipart>=0.0.22" \
-        "httpx>=0.28.1"
+COPY pyproject.toml ./
+RUN pip install --no-cache-dir .
 
 # Copy application code
 COPY pyproject.toml pytest.ini main.py ./

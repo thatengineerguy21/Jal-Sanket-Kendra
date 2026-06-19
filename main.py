@@ -120,13 +120,17 @@ app.add_middleware(
 )
 
 
-# ── Global Exception Handler ───────────────────────────────────────────
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
 @app.exception_handler(Exception)
 async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """
     Catch-all so that unexpected errors never leak tracebacks to clients.
     The real exception is logged server-side.
     """
+    if isinstance(exc, StarletteHTTPException):
+        raise exc
+        
     logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
     return JSONResponse(
         status_code=500,
