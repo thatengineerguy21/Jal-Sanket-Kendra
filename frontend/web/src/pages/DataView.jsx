@@ -207,6 +207,12 @@ export default function DataView({ samples, setSamples, summary }) {
     load()
   }, [load])
 
+  useEffect(() => {
+    if (summary?.invalid_count != null) {
+      addToast(`Number of invalid records: ${summary.invalid_count}`, summary.invalid_count > 0 ? 'error' : 'info', 15000)
+    }
+  }, [summary?.invalid_count, addToast])
+
   const processUpload = async (file) => {
     if (!file) {
       addToast('Please select a CSV, JSON, PDF, or Excel file.', 'error')
@@ -340,7 +346,7 @@ export default function DataView({ samples, setSamples, summary }) {
       </div>
 
       {/* ── Summary Stats ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger-children">
         <StatCard
           icon={icons.hpi}
           label="Avg HMPI"
@@ -361,13 +367,6 @@ export default function DataView({ samples, setSamples, summary }) {
           value={summary?.avg_pli != null ? Number(summary.avg_pli).toFixed(2) : '—'}
           subtitle="Pollution Load Index"
           color="amber"
-        />
-        <StatCard
-          icon={icons.alert}
-          label="Invalid Records"
-          value={summary?.invalid_count != null ? summary.invalid_count : '—'}
-          subtitle={summary?.count ? `${summary.count - summary.invalid_count} valid` : '—'}
-          color="rose"
         />
       </div>
 

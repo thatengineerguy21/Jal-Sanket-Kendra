@@ -31,11 +31,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.0"
-          memory: 512M
+          cpus: "2.0"
+          memory: 2048M
         reservations:
-          cpus: "0.25"
-          memory: 128M
+          cpus: "0.5"
+          memory: 512M
 
 volumes:
   app-data:

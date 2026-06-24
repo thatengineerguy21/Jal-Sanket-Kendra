@@ -302,6 +302,7 @@ def _read_tables_with_tabula(data: bytes) -> List[pd.DataFrame]:
                 multiple_tables=True,
                 pandas_options={"dtype": str},
                 encoding="cp1252",
+                java_options=["-Xmx1024m"],
                 **opts,
             )
         except Exception as exc:  # noqa: BLE001 - tabula raises a variety of types

@@ -134,6 +134,20 @@ pH, EC, CO3, HCO3, Cl, F, SO4, NO3, PO4, Total Hardness, Ca, Mg, Na, K, TDS, SiO
 
 ---
 
+## Screenshot
+
+### Dashboard View
+
+![Dashboard View](docs\images\dashboard.png)
+
+### Map View(Zoomed Out)
+
+![Map View](docs\images\map.png)
+
+In zoomed out mode, hovering will show number of datapoints in the region.
+
+---
+
 ## 📝 Troubleshooting
 
 - **PDF extraction silently fails** — Verify Java is installed and `java` is on your PATH. The `tabula-py` engine relies on a Java subprocess fallback.

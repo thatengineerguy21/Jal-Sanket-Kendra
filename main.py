@@ -44,6 +44,57 @@ cwd = Path(__file__).parent
 
 
 # ── Lightweight Migration ───────────────────────────────────────────────
+def _migrate_fix_not_null_constraints() -> None:
+    """
+    Check if existing tables have columns with NOT NULL constraints that should be nullable
+    (e.g. water_samples.latitude), and rebuild the table if necessary to remove the constraint.
+    """
+    from sqlalchemy import inspect as sa_inspect, text
+
+    inspector = sa_inspect(engine)
+    for table in Base.metadata.sorted_tables:
+        if not inspector.has_table(table.name):
+            continue
+
+        columns_info = inspector.get_columns(table.name)
+        needs_rebuild = False
+        for col_info in columns_info:
+            col_name = col_info["name"]
+            if col_name in table.columns:
+                orm_col = table.columns[col_name]
+                if orm_col.nullable and not col_info["nullable"] and not orm_col.primary_key:
+                    logger.info("Table '%s' column '%s' has NOT NULL constraint but should be nullable. Rebuilding table...", table.name, col_name)
+                    needs_rebuild = True
+                    break
+
+        if needs_rebuild:
+            with engine.connect() as conn:
+                old_table_name = f"{table.name}_old_migration"
+                if inspector.has_table(old_table_name):
+                    conn.execute(text(f'DROP TABLE "{old_table_name}"'))
+                
+                for idx in inspector.get_indexes(table.name):
+                    idx_name = idx["name"]
+                    if idx_name:
+                        conn.execute(text(f'DROP INDEX "{idx_name}"'))
+                
+                conn.execute(text(f'ALTER TABLE "{table.name}" RENAME TO "{old_table_name}"'))
+                conn.commit()
+
+            Base.metadata.create_all(bind=engine)
+
+            with engine.connect() as conn:
+                new_inspector = sa_inspect(engine)
+                old_cols = {c["name"] for c in new_inspector.get_columns(old_table_name)}
+                new_cols = {c["name"] for c in new_inspector.get_columns(table.name)}
+                common_cols = ", ".join(f'"{c}"' for c in old_cols.intersection(new_cols))
+                
+                conn.execute(text(f'INSERT INTO "{table.name}" ({common_cols}) SELECT {common_cols} FROM "{old_table_name}"'))
+                conn.execute(text(f'DROP TABLE "{old_table_name}"'))
+                conn.commit()
+            logger.info("Successfully rebuilt table '%s' to fix NOT NULL constraints.", table.name)
+
+
 def _migrate_add_missing_columns() -> None:
     """
     Add columns that exist in ORM models but are missing from the on-disk
@@ -76,6 +127,7 @@ async def lifespan(app: FastAPI):
     """Create DB tables on startup (safe for SQLite / dev)."""
     logger.info("Creating database tables (if not exist) …")
     Base.metadata.create_all(bind=engine)
+    _migrate_fix_not_null_constraints()
     _migrate_add_missing_columns()
     yield
     logger.info("Application shutting down.")
