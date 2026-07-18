@@ -13,14 +13,13 @@ import logging
 import os
 import sys
 from contextvars import ContextVar
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from logging.handlers import RotatingFileHandler
-from typing import Optional
 
 from app.config import settings
 
 # ContextVar set by the request-ID middleware.
-request_id_ctx: ContextVar[Optional[str]] = ContextVar("request_id", default=None)
+request_id_ctx: ContextVar[str | None] = ContextVar("request_id", default=None)
 
 
 class _JSONFormatter(logging.Formatter):
@@ -28,7 +27,7 @@ class _JSONFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         log_entry = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -55,15 +54,15 @@ def setup_logging() -> None:
     """Call once at startup to wire formatters and handlers."""
     # Ensure logs directory exists
     os.makedirs("logs", exist_ok=True)
-    
+
     console_handler = logging.StreamHandler(sys.stdout)
     file_handler = RotatingFileHandler("logs/app.log", maxBytes=10485760, backupCount=5, encoding="utf-8")
-    
+
     if settings.APP_ENV == "production":
         formatter = _JSONFormatter()
     else:
         formatter = _DevFormatter(fmt=_DevFormatter.fmt)
-        
+
     console_handler.setFormatter(formatter)
     file_handler.setFormatter(formatter)
 

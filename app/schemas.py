@@ -5,64 +5,65 @@ Pydantic schemas shared across route modules.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
-from typing import Dict, List, Optional, Any
 from datetime import datetime
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ── Upload / Sample ────────────────────────────────────────────────────
 class IndicesSet(BaseModel):
-    ci: Dict[str, float] = {}
-    ehci: Dict[str, float] = {}
-    hei: Optional[float] = None
-    pli: Optional[float] = None
-    hmpi: Optional[float] = None
-    hi: Optional[float] = None
+    ci: dict[str, float] = {}
+    ehci: dict[str, float] = {}
+    hei: float | None = None
+    pli: float | None = None
+    hmpi: float | None = None
+    hi: float | None = None
 
 
 class SampleResponse(BaseModel):
     id: int
-    village_code: Optional[str] = None
-    state: Optional[str] = None
-    district: Optional[str] = None
-    location: Optional[str] = None
-    year: Optional[int] = None
-    source: Optional[str] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    
-    # New dedicated DB columns
-    fe: Optional[float] = None
-    as_: Optional[float] = None
-    u: Optional[float] = None
-    hmpi_bis: Optional[float] = None
-    hei_bis: Optional[float] = None
-    pli_bis: Optional[float] = None
+    village_code: str | None = None
+    state: str | None = None
+    district: str | None = None
+    location: str | None = None
+    year: int | None = None
+    source: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
 
-    parameters: Dict[str, Any] = Field(default_factory=dict)
-    standards: Dict[str, Any] = Field(default_factory=dict)
-    validation_issues: List[str] = Field(default_factory=list)
-    
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    # New dedicated DB columns
+    fe: float | None = None
+    as_: float | None = None
+    u: float | None = None
+    hmpi_bis: float | None = None
+    hei_bis: float | None = None
+    pli_bis: float | None = None
+
+    parameters: dict[str, Any] = Field(default_factory=dict)
+    standards: dict[str, Any] = Field(default_factory=dict)
+    validation_issues: list[str] = Field(default_factory=list)
+
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class PaginatedSampleResponse(BaseModel):
     total: int
-    items: List[SampleResponse]
+    items: list[SampleResponse]
 
 
 class MapPointResponse(BaseModel):
     id: int
     latitude: float
     longitude: float
-    hmpi_bis: Optional[float] = None
+    hmpi_bis: float | None = None
 
 
 class MapResponse(BaseModel):
-    points: List[MapPointResponse]
+    points: list[MapPointResponse]
 
 
 # ── Indices ─────────────────────────────────────────────────────────────
@@ -80,16 +81,16 @@ class IndicesSummary(BaseModel):
 # ── Quick Calculator ───────────────────────────────────────────────────
 class QuickCalcRequest(BaseModel):
     """Request body for the quick calculator endpoint."""
-    metals: Dict[str, float]
+    metals: dict[str, float]
     standard: str = "BIS"
 
 
 class QuickCalcResponse(BaseModel):
     """Response from the quick calculator endpoint."""
-    indices: Dict[str, Any]
+    indices: dict[str, Any]
     standard: str
     reduced_parameter_set: bool = False
-    missing_parameters: List[str] = Field(default_factory=list)
+    missing_parameters: list[str] = Field(default_factory=list)
 
 
 # ── Predictions ─────────────────────────────────────────────────────────
@@ -119,3 +120,25 @@ class HealthResponse(BaseModel):
     status: str
     version: str
     environment: str
+
+
+# ── Background Tasks ───────────────────────────────────────────────────
+class TaskAcceptedResponse(BaseModel):
+    """Returned immediately when an upload is accepted for background processing."""
+    task_id: str
+    status: str = "pending"
+    poll_url: str
+
+
+class TaskStatusResponse(BaseModel):
+    """Full status of a background task, returned by the polling endpoint."""
+    task_id: str
+    status: str  # pending | processing | completed | failed
+    progress: int = 0
+    result: dict[str, Any] | None = None
+    error_message: str | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+

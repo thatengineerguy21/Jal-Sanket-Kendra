@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import io
 import logging
-from typing import Optional, Set, List
 
 import pandas as pd
 from fastapi import HTTPException, UploadFile
@@ -19,7 +18,7 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-REQUIRED_COLUMNS: List[str] = [
+REQUIRED_COLUMNS: list[str] = [
     "village_code",
     "state",
     "district",
@@ -70,12 +69,12 @@ REQUIRED_COLUMNS: List[str] = [
 # heavy metals. Rejecting the whole file over an absent optional column
 # throws away coordinates and heavy-metal readings that *did* parse
 # correctly — which is the behavior this change is meant to fix.
-_LOCATION_COLUMNS: Set[str] = {"village_code", "state", "district", "location"}
-_COORDINATE_COLUMNS: Set[str] = {
+_LOCATION_COLUMNS: set[str] = {"village_code", "state", "district", "location"}
+_COORDINATE_COLUMNS: set[str] = {
     "coordinates.coordinates[0]",
     "coordinates.coordinates[1]",
 }
-_PARAMETER_COLUMNS: Set[str] = {
+_PARAMETER_COLUMNS: set[str] = {
     c for c in REQUIRED_COLUMNS if c.startswith("parameters.")
 }
 
@@ -92,9 +91,9 @@ ALLOWED_CONTENT_TYPES = _CSV_TYPES | _JSON_TYPES | _PDF_TYPES | _EXCEL_TYPES
 async def parse_upload(
     file: UploadFile,
     *,
-    allowed_types: Optional[Set[str]] = None,
+    allowed_types: set[str] | None = None,
     validate_columns: bool = True,
-) -> List[dict]:
+) -> list[dict]:
     """
     Read an ``UploadFile`` into a validated list of dicts.
     Raises ``HTTPException`` on any validation or parse error.
@@ -104,7 +103,8 @@ async def parse_upload(
 
     content_type = file.content_type or ""
 
-    if content_type not in allowed_types and not file.filename.endswith(('.csv', '.json', '.xls', '.xlsx', '.pdf')):
+    filename = file.filename or ""
+    if content_type not in allowed_types and not filename.endswith(('.csv', '.json', '.xls', '.xlsx', '.pdf')):
         raise HTTPException(
             status_code=415,
             detail="Unsupported file type. Please upload a CSV, JSON, PDF, or Excel file.",
@@ -117,7 +117,7 @@ async def parse_upload(
             detail=f"File too large. Maximum allowed size is {settings.MAX_UPLOAD_SIZE_BYTES} bytes.",
         )
 
-    df = _parse_bytes(contents, file.filename, content_type)
+    df = _parse_bytes(contents, filename, content_type)
     df.columns = df.columns.str.strip()
 
     if validate_columns:
@@ -153,11 +153,11 @@ async def parse_upload(
 
     # Replace nan with None
     df = df.where(pd.notnull(df), None)
-    
+
     return df.to_dict(orient="records")
 
 
-def _has_minimum_signal(columns: Set[str]) -> bool:
+def _has_minimum_signal(columns: set[str]) -> bool:
     """True if *columns* contains at least one location, coordinate, or
     measured-parameter field — i.e. there's something worth ingesting."""
     return bool(

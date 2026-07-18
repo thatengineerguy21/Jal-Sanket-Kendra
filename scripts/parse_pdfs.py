@@ -1,6 +1,7 @@
-import os
 import glob
 import logging
+import os
+
 import pandas as pd
 import tabula
 
@@ -66,7 +67,7 @@ def extract_year_from_filename(filename: str) -> int:
 
 def process_pdfs():
     all_records = []
-    
+
     pdf_files = glob.glob(os.path.join(PDF_DIR, "*.pdf"))
     if not pdf_files:
         logging.warning("No PDF files found in %s", PDF_DIR)
@@ -77,50 +78,50 @@ def process_pdfs():
     for pdf_file in pdf_files:
         logging.info("Processing %s...", pdf_file)
         default_year = extract_year_from_filename(pdf_file)
-        
+
         try:
             # multiple_tables=True extracts all tables
             # guess=True tries to guess column boundaries
             tables = tabula.read_pdf(
-                pdf_file, 
-                pages='all', 
-                multiple_tables=True, 
+                pdf_file,
+                pages='all',
+                multiple_tables=True,
                 guess=True,
                 encoding="cp1252"
             )
             for i, df in enumerate(tables):
                 if df.empty:
                     continue
-                
+
                 # Standardize columns based on heuristics
                 mapped_columns = {}
                 for col in df.columns:
                     mapped = map_column(col)
                     if mapped:
                         mapped_columns[col] = mapped
-                
+
                 # Rename columns that we matched
                 df = df.rename(columns=mapped_columns)
-                
+
                 # Drop duplicate columns
                 df = df.loc[:, ~df.columns.duplicated()]
-                
+
                 # Keep only mapped columns
                 available_targets = [c for c in df.columns if c in TARGET_COLUMNS]
                 if not available_targets:
                     # No recognizable columns in this table, skip
                     continue
-                
+
                 df_filtered = df[available_targets].copy()
-                
+
                 # Assign default values for required columns if missing
                 if "year" not in df_filtered.columns:
                     df_filtered["year"] = default_year
                 if "source" not in df_filtered.columns:
                     df_filtered["source"] = f"pdf_import_{os.path.basename(pdf_file)}"
-                
+
                 all_records.append(df_filtered)
-                
+
         except Exception as e:
             logging.error("Failed to parse %s: %s", pdf_file, e)
 
@@ -130,15 +131,15 @@ def process_pdfs():
 
     # Combine all DataFrames
     combined_df = pd.concat(all_records, ignore_index=True)
-    
+
     # Ensure all target columns exist
     for col in TARGET_COLUMNS:
         if col not in combined_df.columns:
             combined_df[col] = None
-    
+
     # Reorder columns
     combined_df = combined_df[TARGET_COLUMNS]
-    
+
     # Export to CSV
     combined_df.to_csv(OUTPUT_CSV, index=False)
     logging.info("Successfully exported parsed data to %s (Rows: %d)", OUTPUT_CSV, len(combined_df))

@@ -5,17 +5,63 @@ description = "Jal Sanket Kendra is used for testing presence of Heavy Metals in
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "alembic>=1.16.0",
+    "cachetools>=5.5.0",
     "fastapi>=0.128.0",
     "httpx>=0.28.1",
     "jpype1>=1.5.0",
     "pandas>=3.0.0",
+    "prometheus-fastapi-instrumentator>=7.0.0",
     "pydantic>=2.12.5",
-    "pytest>=9.0.2",
     "python-multipart>=0.0.22",
     "sqlalchemy>=2.0.46",
     "tabula-py>=2.9.0",
     "uvicorn>=0.40.0",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "mypy>=1.16.0",
+    "pre-commit>=4.0.0",
+    "pytest>=9.0.2",
+    "ruff>=0.11.0",
+]
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["app", "app.*", "app.routes", "app.routes.*", "app.services", "app.services.*"]
+
+# ── Ruff (linting & formatting) ─────────────────────────────────────────
+[tool.ruff]
+target-version = "py314"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # Depends() / File() in function arguments (FastAPI standard)
+    "E402",  # Module level import not at top of file (used for setup)
+    "E701",  # Multiple statements on one line
+    "E741",  # Ambiguous variable name
+    "B007",  # Loop control variable not used
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+# ── Mypy (type checking) ────────────────────────────────────────────────
+[tool.mypy]
+python_version = "3.14"
+warn_return_any = false
+warn_unused_configs = true
+ignore_missing_imports = true
+check_untyped_defs = true
+disable_error_code = ["arg-type", "assignment", "no-any-return", "union-attr", "return-value", "call-overload", "attr-defined", "valid-type", "misc"]

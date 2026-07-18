@@ -4,12 +4,11 @@
 from __future__ import annotations
 
 import logging
-from typing import List
 
 from fastapi import APIRouter, File, UploadFile
 
 from app.schemas import PredictionResult
-from app.services import file_parser, calculation_service
+from app.services import calculation_service, file_parser
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -18,7 +17,7 @@ router = APIRouter()
 _PREDICT_TYPES = {"text/csv", "application/json"}
 
 
-@router.post("/predict-hotspots/", response_model=List[PredictionResult])
+@router.post("/predict-hotspots/", response_model=list[PredictionResult])
 async def predict_hotspots(
     file: UploadFile = File(...),
 ) -> list:

@@ -6,16 +6,12 @@ Service layer wrapping calculator functions based on CGWB standard.
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Mapping, Tuple
-import pandas as pd
-from sqlalchemy.orm import Session
-from datetime import datetime
-
-from app import models
+from collections.abc import Mapping
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
-from app.standards import STANDARDS, RFD
+from app.standards import STANDARDS
 
 # Constants for Heavy Metals dynamically loaded from standards
 WHO_LIMITS_METALS = {k: v["Si"] for k, v in STANDARDS.get("WHO", {}).items() if "Si" in v}
@@ -27,8 +23,8 @@ def safe_div(a: float, b: float):
     except Exception:
         return None
 
-def calc_ci(params: Dict[str, float], limits: Dict[str, float]) -> Dict[str, float]:
-    ci: Dict[str, float] = {}
+def calc_ci(params: dict[str, float], limits: dict[str, float]) -> dict[str, float]:
+    ci: dict[str, float] = {}
     for metal, std in limits.items():
         if metal in params and params[metal] is not None:
             val = safe_div(params[metal], std)
@@ -36,15 +32,15 @@ def calc_ci(params: Dict[str, float], limits: Dict[str, float]) -> Dict[str, flo
                 ci[metal] = val
     return ci
 
-def calc_ehci(ci: Dict[str, float]) -> Dict[str, float]:
+def calc_ehci(ci: dict[str, float]) -> dict[str, float]:
     return {m: v ** 2 for m, v in ci.items()}
 
-def calc_hei(ci: Dict[str, float]):
+def calc_hei(ci: dict[str, float]):
     if not ci:
         return None
     return sum(ci.values())
 
-def calc_pli(ci: Dict[str, float]):
+def calc_pli(ci: dict[str, float]):
     if not ci:
         return None
     vals = [v for v in ci.values() if v >= 0]
@@ -57,7 +53,7 @@ def calc_pli(ci: Dict[str, float]):
         return 0.0
     return product ** (1.0 / len(vals))
 
-def calc_hmpi(params: Dict[str, float], limits: Dict[str, float]):
+def calc_hmpi(params: dict[str, float], limits: dict[str, float]):
     numerator = 0.0
     denominator = 0.0
     for metal, std in limits.items():
@@ -71,7 +67,7 @@ def calc_hmpi(params: Dict[str, float], limits: Dict[str, float]):
         return None
     return numerator / denominator
 
-def calc_hi(params: Dict[str, float], rfd: Dict[str, float]):
+def calc_hi(params: dict[str, float], rfd: dict[str, float]):
     total = 0.0
     count = 0
     for metal, R in rfd.items():
@@ -80,7 +76,7 @@ def calc_hi(params: Dict[str, float], rfd: Dict[str, float]):
             count += 1
     return total if count else None
 
-def convert_units_for_metals(params: Dict[str, Any]) -> Dict[str, Any]:
+def convert_units_for_metals(params: dict[str, Any]) -> dict[str, Any]:
     """
     Convert ppb → mg/L for trace metals commonly reported in ppb.
     Fe, Mn, Zn, Cu are assumed to be mg/L (ppm) and kept as is.
@@ -95,7 +91,7 @@ def convert_units_for_metals(params: Dict[str, Any]) -> Dict[str, Any]:
     return converted
 
 
-def get_missing_metals(params: Dict[str, Any], limits: Dict[str, float]) -> List[str]:
+def get_missing_metals(params: dict[str, Any], limits: dict[str, float]) -> list[str]:
     """Return a list of expected metals that are missing or None in the params."""
     missing = []
     for metal in limits.keys():
@@ -104,7 +100,7 @@ def get_missing_metals(params: Dict[str, Any], limits: Dict[str, float]) -> List
     return missing
 
 
-def predict_hotspots(rows: List[Mapping]) -> List[Dict[str, Any]]:
+def predict_hotspots(rows: list[Mapping]) -> list[dict[str, Any]]:
     """
     Compute per-location pollution risk predictions from uploaded data.
 
@@ -114,7 +110,7 @@ def predict_hotspots(rows: List[Mapping]) -> List[Dict[str, Any]]:
     Returns a list of dicts matching the ``PredictionResult`` schema:
     ``{latitude, longitude, risk_score, risk_category}``.
     """
-    results: List[Dict[str, Any]] = []
+    results: list[dict[str, Any]] = []
 
     for row in rows:
         # ── Extract coordinates ────────────────────────────────────
@@ -132,7 +128,7 @@ def predict_hotspots(rows: List[Mapping]) -> List[Dict[str, Any]]:
             continue
 
         # ── Extract metal concentrations ───────────────────────────
-        metal_raw: Dict[str, float] = {}
+        metal_raw: dict[str, float] = {}
         for key in ("Fe", "As", "U"):
             param_key = f"parameters.{key}"
             val = row.get(param_key)

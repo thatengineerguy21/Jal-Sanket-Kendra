@@ -8,6 +8,7 @@ Wires up:
   - Security headers, request-ID, and rate-limit middleware
   - TrustedHostMiddleware
   - Global exception handler (no stack-trace leaks)
+  - Prometheus metrics instrumentation
   - All API routers under /api/v1
   - Static frontend mount
   - Startup / shutdown lifecycle events
@@ -43,92 +44,18 @@ logger = logging.getLogger(__name__)
 cwd = Path(__file__).parent
 
 
-# ── Lightweight Migration ───────────────────────────────────────────────
-def _migrate_fix_not_null_constraints() -> None:
-    """
-    Check if existing tables have columns with NOT NULL constraints that should be nullable
-    (e.g. water_samples.latitude), and rebuild the table if necessary to remove the constraint.
-    """
-    from sqlalchemy import inspect as sa_inspect, text
-
-    inspector = sa_inspect(engine)
-    for table in Base.metadata.sorted_tables:
-        if not inspector.has_table(table.name):
-            continue
-
-        columns_info = inspector.get_columns(table.name)
-        needs_rebuild = False
-        for col_info in columns_info:
-            col_name = col_info["name"]
-            if col_name in table.columns:
-                orm_col = table.columns[col_name]
-                if orm_col.nullable and not col_info["nullable"] and not orm_col.primary_key:
-                    logger.info("Table '%s' column '%s' has NOT NULL constraint but should be nullable. Rebuilding table...", table.name, col_name)
-                    needs_rebuild = True
-                    break
-
-        if needs_rebuild:
-            with engine.connect() as conn:
-                old_table_name = f"{table.name}_old_migration"
-                if inspector.has_table(old_table_name):
-                    conn.execute(text(f'DROP TABLE "{old_table_name}"'))
-                
-                for idx in inspector.get_indexes(table.name):
-                    idx_name = idx["name"]
-                    if idx_name:
-                        conn.execute(text(f'DROP INDEX "{idx_name}"'))
-                
-                conn.execute(text(f'ALTER TABLE "{table.name}" RENAME TO "{old_table_name}"'))
-                conn.commit()
-
-            Base.metadata.create_all(bind=engine)
-
-            with engine.connect() as conn:
-                new_inspector = sa_inspect(engine)
-                old_cols = {c["name"] for c in new_inspector.get_columns(old_table_name)}
-                new_cols = {c["name"] for c in new_inspector.get_columns(table.name)}
-                common_cols = ", ".join(f'"{c}"' for c in old_cols.intersection(new_cols))
-                
-                conn.execute(text(f'INSERT INTO "{table.name}" ({common_cols}) SELECT {common_cols} FROM "{old_table_name}"'))
-                conn.execute(text(f'DROP TABLE "{old_table_name}"'))
-                conn.commit()
-            logger.info("Successfully rebuilt table '%s' to fix NOT NULL constraints.", table.name)
-
-
-def _migrate_add_missing_columns() -> None:
-    """
-    Add columns that exist in ORM models but are missing from the on-disk
-    SQLite database.  ``create_all()`` only creates *new* tables — it won't
-    ALTER existing ones.  This closes the gap for pre-existing databases.
-
-    Safe to run repeatedly (idempotent).
-    """
-    from sqlalchemy import inspect as sa_inspect, text
-
-    inspector = sa_inspect(engine)
-    for table in Base.metadata.sorted_tables:
-        if not inspector.has_table(table.name):
-            continue  # table doesn't exist yet; create_all will handle it
-
-        existing = {col["name"] for col in inspector.get_columns(table.name)}
-        for column in table.columns:
-            if column.name not in existing:
-                col_type = column.type.compile(dialect=engine.dialect)
-                stmt = f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {col_type}'
-                logger.info("Migrating: %s", stmt)
-                with engine.connect() as conn:
-                    conn.execute(text(stmt))
-                    conn.commit()
-
-
 # ── Lifecycle ───────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Create DB tables on startup (safe for SQLite / dev)."""
+    """Create DB tables on startup (safe for SQLite / dev).
+
+    NOTE: For schema changes in production, use Alembic migrations:
+        alembic upgrade head
+    The ``create_all()`` call below is a safety net for fresh databases
+    only — it will NOT alter existing tables.
+    """
     logger.info("Creating database tables (if not exist) …")
     Base.metadata.create_all(bind=engine)
-    _migrate_fix_not_null_constraints()
-    _migrate_add_missing_columns()
     yield
     logger.info("Application shutting down.")
 
@@ -174,6 +101,7 @@ app.add_middleware(
 
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+
 @app.exception_handler(Exception)
 async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """
@@ -182,7 +110,7 @@ async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSON
     """
     if isinstance(exc, StarletteHTTPException):
         raise exc
-        
+
     logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
     return JSONResponse(
         status_code=500,
@@ -192,6 +120,19 @@ async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSON
 
 # ── Routers ─────────────────────────────────────────────────────────────
 app.include_router(api.router, prefix="/api/v1", tags=["Pollution Indices"])
+
+
+# ── Prometheus Metrics (Gap #6) ─────────────────────────────────────────
+from prometheus_fastapi_instrumentator import Instrumentator
+
+instrumentator = Instrumentator(
+    should_group_status_codes=True,
+    should_ignore_untemplated=True,
+    should_respect_env_var=False,
+    excluded_handlers=["/metrics", "/health"],
+    env_var_name="ENABLE_METRICS",
+)
+instrumentator.instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
 
 # ── Static frontend ────────────────────────────────────────────────────

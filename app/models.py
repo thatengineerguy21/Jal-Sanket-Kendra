@@ -4,8 +4,9 @@ SQLAlchemy ORM models and database session management.
 """
 
 from __future__ import annotations
+
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import (
     Column,
@@ -16,7 +17,7 @@ from sqlalchemy import (
     Text,
     create_engine,
 )
-from sqlalchemy.orm import declarative_base, sessionmaker, Session
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from app.config import settings
 
@@ -29,7 +30,7 @@ Base = declarative_base()
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class WaterSample(Base):
@@ -38,7 +39,7 @@ class WaterSample(Base):
     __tablename__ = "water_samples"
 
     id: int = Column(Integer, primary_key=True, index=True)
-    
+
     village_code: str = Column(String, index=True, nullable=True)
     state: str = Column(String, index=True, nullable=True)
     district: str = Column(String, index=True, nullable=True)
@@ -120,6 +121,34 @@ class AlertConfig(Base):
             f"<AlertConfig id={self.id} hpi_thr={self.hpi_threshold} "
             f"cd_thr={self.cd_threshold}>"
         )
+
+
+class TaskStatus(Base):
+    """Tracks the status of background upload-and-calculate jobs."""
+
+    __tablename__ = "task_status"
+
+    id = Column(String, primary_key=True)
+    status = Column(String, nullable=False, default="pending")  # pending | processing | completed | failed
+    progress = Column(Integer, default=0)  # 0–100
+    result_json = Column(Text, default="{}")
+    error_message = Column(String, nullable=True)
+
+    created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+    @property
+    def result(self) -> dict:
+        if not self.result_json:
+            return {}
+        return json.loads(self.result_json)
+
+    @result.setter
+    def result(self, value: dict):
+        self.result_json = json.dumps(value)
+
+    def __repr__(self) -> str:
+        return f"<TaskStatus id={self.id} status={self.status} progress={self.progress}>"
 
 
 def get_db():

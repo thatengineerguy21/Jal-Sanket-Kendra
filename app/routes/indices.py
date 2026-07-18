@@ -1,27 +1,28 @@
 # app/routes/indices.py
-"""Indices summary and datasets endpoints."""
+"""Indices summary and datasets endpoints with caching."""
 
 from __future__ import annotations
 
 import logging
-from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app import models
-from app.schemas import IndicesSummary, PaginatedSampleResponse, MapResponse, MapPointResponse, SampleResponse
+from app.cache import cached_indices, cached_map
+from app.schemas import IndicesSummary, MapResponse, PaginatedSampleResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
 @router.get("/indices/", response_model=IndicesSummary)
+@cached_indices
 async def indices_summary(db: Session = Depends(models.get_db)) -> IndicesSummary:
     """Aggregate averages for indices across all stored results using native DB functions."""
     count = db.query(models.WaterSample).count()
-    
+
     # Count how many records have validation issues
     invalid_count = db.query(models.WaterSample).filter(
         models.WaterSample.validation_issues_json != '[]'
@@ -65,7 +66,7 @@ async def list_datasets(
         func.length(models.WaterSample.validation_issues_json),
         models.WaterSample.id
     ).limit(limit).offset(offset).all()
-    
+
     return {
         "total": total,
         "items": samples
@@ -73,8 +74,9 @@ async def list_datasets(
 
 
 @router.get("/datasets/map", response_model=MapResponse)
+@cached_map
 async def get_map_points(
-    bbox: Optional[str] = Query(None, description="minLng,minLat,maxLng,maxLat"),
+    bbox: str | None = Query(None, description="minLng,minLat,maxLng,maxLat"),
     db: Session = Depends(models.get_db)
 ) -> dict:
     """Lightweight endpoint for map rendering. Supports viewport bounds filtering."""
@@ -99,7 +101,7 @@ async def get_map_points(
 
     # Limit to max 50,000 points to prevent accidental overwhelming
     results = query.limit(50000).all()
-    
+
     points = [
         {"id": r[0], "latitude": r[1], "longitude": r[2], "hmpi_bis": r[3]}
         for r in results

@@ -1,12 +1,13 @@
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, StaticPool
+from sqlalchemy import StaticPool, create_engine
 from sqlalchemy.orm import sessionmaker
+
+# The imports for models are correct as they are inside the 'app' package
+from app.models import Base, get_db
 
 # Corrected import: 'app' is imported from 'main.py' in the root directory
 from main import app
-# The imports for models are correct as they are inside the 'app' package
-from app.models import Base, get_db
 
 # --- Test Database Setup ---
 # Use an in-memory SQLite database for testing to ensure isolation and speed.
@@ -41,11 +42,12 @@ def db_session():
 
 
 @pytest.fixture(scope="function")
-def client(db_session):
+def client(db_session, monkeypatch):
     """
     Fixture to provide a TestClient instance that uses the test database.
     This overrides the `get_db` dependency for the duration of the test.
     """
+    from app import models
 
     def override_get_db():
         """
@@ -56,8 +58,10 @@ def client(db_session):
         finally:
             pass  # Don't close here — db_session fixture handles cleanup
 
-    # Apply the override
+    # Apply the overrides
     app.dependency_overrides[get_db] = override_get_db
+    monkeypatch.setattr(models, "SessionLocal", TestingSessionLocal)
+    monkeypatch.setattr(models, "engine", engine)
 
     # Yield the test client
     yield TestClient(app)

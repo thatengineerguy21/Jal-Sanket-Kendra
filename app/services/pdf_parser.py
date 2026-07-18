@@ -28,7 +28,6 @@ from __future__ import annotations
 import io
 import logging
 import re
-from typing import Dict, List, Optional
 
 import pandas as pd
 import tabula
@@ -43,7 +42,7 @@ logger = logging.getLogger(__name__)
 # `map_column()` for exactly how short vs. long keywords are treated
 # differently (this is what fixes the Fe/F and "X as CaCO3"/Arsenic
 # collisions).
-COLUMN_HEURISTICS: Dict[str, List[str]] = {
+COLUMN_HEURISTICS: dict[str, list[str]] = {
     "village_code": ["village code", "vill code", "village id", "vill id"],
     "state": ["state"],
     "district": ["district", "dist"],
@@ -102,7 +101,7 @@ def _leading_token(header: str) -> str:
     return m.group(0) if m else ""
 
 
-def map_column(col_name) -> Optional[str]:
+def map_column(col_name) -> str | None:
     """
     Return the target column name a PDF table header should map to, or
     None if nothing matches.
@@ -280,7 +279,7 @@ def extract_year_from_filename(filename: str) -> int:
     return 2023
 
 
-def _read_tables_with_tabula(data: bytes) -> List[pd.DataFrame]:
+def _read_tables_with_tabula(data: bytes) -> list[pd.DataFrame]:
     """
     Try a couple of tabula extraction strategies, since a single mode
     doesn't reliably handle every PDF layout: ``guess=True`` (lattice/
@@ -293,7 +292,7 @@ def _read_tables_with_tabula(data: bytes) -> List[pd.DataFrame]:
         {"guess": False, "stream": True},
         {"guess": False, "lattice": True},
     ]
-    last_exc: Optional[Exception] = None
+    last_exc: Exception | None = None
     for opts in attempts:
         try:
             tables = tabula.read_pdf(
@@ -338,7 +337,7 @@ def parse_pdf_bytes(data: bytes, filename: str) -> pd.DataFrame:
     # page that lost its header row (a common tabula artifact when the
     # header text isn't repeated on every page) can reuse it instead of
     # being silently dropped.
-    last_good_raw_columns: Optional[List[str]] = None
+    last_good_raw_columns: list[str] | None = None
 
     for df in tables:
         if df.empty:

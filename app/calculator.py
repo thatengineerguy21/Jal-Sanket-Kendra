@@ -22,42 +22,43 @@ from __future__ import annotations
 
 import logging
 import math
-from typing import Any, Dict, Mapping, Optional, Tuple
+from collections.abc import Mapping
+from typing import Any
 
 import pandas as pd
 
 from app.standards import (
-    STANDARDS,
     EHCI_WEIGHTS,
     HMI_WEIGHTS,
-    PMI_FACTOR_SCORES,
-    NSPMI_MIN,
     NSPMI_MAX,
+    NSPMI_MIN,
+    PMI_FACTOR_SCORES,
+    STANDARDS,
 )
 
 logger = logging.getLogger(__name__)
 
 # ── Metal Name ↔ Symbol Mapping ────────────────────────────────────────
 # Our CSV/data columns use lowercase names; standards use chemical symbols.
-METAL_NAME_TO_SYMBOL: Dict[str, str] = {
+METAL_NAME_TO_SYMBOL: dict[str, str] = {
     "arsenic": "As",
     "cadmium": "Cd",
     "lead": "Pb",
     "zinc": "Zn",
 }
 
-METAL_SYMBOL_TO_NAME: Dict[str, str] = {v: k for k, v in METAL_NAME_TO_SYMBOL.items()}
+METAL_SYMBOL_TO_NAME: dict[str, str] = {v: k for k, v in METAL_NAME_TO_SYMBOL.items()}
 
 # ── Backward-Compatibility Constants ──────────────────────────────────
 # Legacy permissible values in µg/L (kept for external code that imports them).
-PERMISSIBLE_VALUES: Dict[str, int] = {
+PERMISSIBLE_VALUES: dict[str, int] = {
     "arsenic": 10,
     "cadmium": 3,
     "lead": 10,
     "zinc": 5000,
 }
 
-UNIT_WEIGHTAGE: Dict[str, float] = {
+UNIT_WEIGHTAGE: dict[str, float] = {
     metal: 1.0 / value for metal, value in PERMISSIBLE_VALUES.items()
 }
 
@@ -84,7 +85,7 @@ def _safe_value(row: Mapping[str, Any], key: str) -> float | None:
     return val
 
 
-def _resolve_metals(row: Mapping[str, Any]) -> Dict[str, float]:
+def _resolve_metals(row: Mapping[str, Any]) -> dict[str, float]:
     """
     Extract metal concentrations from *row*, returning a dict keyed by
     chemical symbol (e.g. ``'As'``, ``'Pb'``).
@@ -93,7 +94,7 @@ def _resolve_metals(row: Mapping[str, Any]) -> Dict[str, float]:
     symbols (``'As'``).  Symbol-keyed values take precedence when both are
     present.
     """
-    metals: Dict[str, float] = {}
+    metals: dict[str, float] = {}
 
     # First pass: lowercase names → symbols
     for name, symbol in METAL_NAME_TO_SYMBOL.items():
@@ -113,7 +114,7 @@ def _resolve_metals(row: Mapping[str, Any]) -> Dict[str, float]:
 
 
 # ── Index Calculations ─────────────────────────────────────────────────
-def calculate_hpi(row: Mapping[str, Any], standard: str = "BIS") -> Tuple[float, str]:
+def calculate_hpi(row: Mapping[str, Any], standard: str = "BIS") -> tuple[float, str]:
     """
     Heavy Metal Pollution Index (HPI).
 
@@ -175,7 +176,7 @@ def calculate_hpi(row: Mapping[str, Any], standard: str = "BIS") -> Tuple[float,
     return hpi_value, category
 
 
-def calculate_cd(row: Mapping[str, Any], standard: str = "BIS") -> Tuple[float, str]:
+def calculate_cd(row: Mapping[str, Any], standard: str = "BIS") -> tuple[float, str]:
     """
     Contamination Index (CI / Degree of Contamination).
 
@@ -312,7 +313,7 @@ def calculate_pmi(row: Mapping[str, Any], standard: str = "BIS") -> float:
 def calculate_all_indices(
     row: Mapping[str, Any],
     standard: str = "BIS",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Compute all 6 indices and return a dict with values and categories.
 
@@ -329,7 +330,7 @@ def calculate_all_indices(
     """
     std = STANDARDS.get(standard, STANDARDS["BIS"])
     metals = _resolve_metals(row)
-    
+
     expected_metals = set(std.keys())
     provided_metals = set(metals.keys())
     missing_metals = list(expected_metals - provided_metals)

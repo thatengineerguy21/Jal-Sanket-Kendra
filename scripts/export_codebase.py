@@ -1,5 +1,5 @@
-import os
 import glob
+import os
 
 output_file = "codebase_export.md"
 include_globs = [
@@ -21,7 +21,7 @@ with open(output_file, "w", encoding="utf-8") as out:
             if not os.path.isfile(filepath):
                 continue
             out.write(f"## {filepath}\n")
-            
+
             ext = os.path.splitext(filepath)[1].lower()
             lang = "text"
             if ext in [".py"]: lang = "python"
@@ -33,7 +33,7 @@ with open(output_file, "w", encoding="utf-8") as out:
 
             out.write(f"```{lang}\n")
             try:
-                with open(filepath, "r", encoding="utf-8") as f:
+                with open(filepath, encoding="utf-8") as f:
                     out.write(f.read())
             except Exception as e:
                 out.write(f"Error reading file: {e}\n")

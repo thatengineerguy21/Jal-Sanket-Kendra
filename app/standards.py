@@ -15,10 +15,8 @@ Each entry contains:
 
 from __future__ import annotations
 
-from typing import Dict
-
 # ── Drinking Water Standards ───────────────────────────────────────────
-STANDARDS: Dict[str, Dict[str, Dict[str, float]]] = {
+STANDARDS: dict[str, dict[str, dict[str, float]]] = {
     # ----------------------------------------------------------
     # BIS IS 10500:2012 (Reaffirmed 2020, with Amendments 1, 2, & 3)
     # Ii = Acceptable Limit (Desirable Limit)
@@ -67,7 +65,7 @@ STANDARDS: Dict[str, Dict[str, Dict[str, float]]] = {
 
 # ── Toxicity-Based Weights ─────────────────────────────────────────────
 # Entropy-based Heavy Metal Contamination Index weights
-EHCI_WEIGHTS: Dict[str, float] = {
+EHCI_WEIGHTS: dict[str, float] = {
     "As": 0.179,
     "Hg": 0.179,
     "Cd": 0.143,
@@ -82,7 +80,7 @@ EHCI_WEIGHTS: Dict[str, float] = {
 }
 
 # Heavy Metal Index toxicity weights
-HMI_WEIGHTS: Dict[str, float] = {
+HMI_WEIGHTS: dict[str, float] = {
     "As": 0.17,
     "Hg": 0.17,
     "Cd": 0.14,
@@ -97,7 +95,7 @@ HMI_WEIGHTS: Dict[str, float] = {
 }
 
 # PCA-based Metal Index factor scores
-PMI_FACTOR_SCORES: Dict[str, float] = {
+PMI_FACTOR_SCORES: dict[str, float] = {
     "As": 0.16,
     "Hg": 0.16,
     "Cd": 0.13,
@@ -118,7 +116,7 @@ NSPMI_MAX: float = 0.16
 
 # ── Reference Dose Values (mg/kg/day) ─────────────────────────────────
 # Used for health-risk assessment (Hazard Quotient / Chronic Daily Intake)
-RFD: Dict[str, float] = {
+RFD: dict[str, float] = {
     "As": 0.0003,
     "Cd": 0.0005,
     "Pb": 0.0036,

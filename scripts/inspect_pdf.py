@@ -1,4 +1,5 @@
 import sys
+
 import tabula
 
 pdf_path = sys.argv[1]

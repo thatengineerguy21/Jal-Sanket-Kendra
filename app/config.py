@@ -12,10 +12,9 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import List
 
 
-def _csv_list(env_key: str, default: str) -> List[str]:
+def _csv_list(env_key: str, default: str) -> list[str]:
     """Read a comma-separated env var into a list of stripped strings."""
     raw = os.getenv(env_key, default)
     return [v.strip() for v in raw.split(",") if v.strip()]
@@ -35,7 +34,7 @@ class Settings:
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./water_quality.db")
 
     # --- CORS ---
-    CORS_ORIGINS: List[str] = field(default_factory=lambda: _csv_list(
+    CORS_ORIGINS: list[str] = field(default_factory=lambda: _csv_list(
         "CORS_ORIGINS",
         "http://localhost:5173,http://127.0.0.1:8000",
     ))
@@ -47,7 +46,7 @@ class Settings:
     RATE_LIMIT_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
 
     # --- Trusted hosts (empty = allow all) ---
-    TRUSTED_HOSTS: List[str] = field(default_factory=lambda: _csv_list(
+    TRUSTED_HOSTS: list[str] = field(default_factory=lambda: _csv_list(
         "TRUSTED_HOSTS", "*"
     ))
 
