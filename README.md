@@ -138,11 +138,11 @@ pH, EC, CO3, HCO3, Cl, F, SO4, NO3, PO4, Total Hardness, Ca, Mg, Na, K, TDS, SiO
 
 ### Dashboard View
 
-![Dashboard View](docs\images\dashboard.png)
+![Dashboard View](https://github.com/thatengineerguy21/Jal-Sanket-Kendra/blob/main/docs/images/dashboard.png)
 
 ### Map View(Zoomed Out)
 
-![Map View](docs\images\map.png)
+![Map View](https://github.com/thatengineerguy21/Jal-Sanket-Kendra/blob/main/docs/images/map.png)
 
 In zoomed out mode, hovering will show number of datapoints in the region.
 
