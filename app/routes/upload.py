@@ -8,13 +8,14 @@ import logging
 import math
 import uuid
 from typing import Any
+
 import reverse_geocoder as rg
 
 # Force initialization of the KDTree in the main thread to prevent
 # C-extension segmentation faults on Windows when spawned in a background thread.
 rg.search((28.6139, 77.2090), mode=1)
 
-from fastapi import APIRouter, Depends, File, UploadFile, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Depends, File, UploadFile
 from sqlalchemy.orm import Session
 
 from app import models
@@ -56,11 +57,13 @@ PARAM_COLUMN_MAP = {
     "parameters.Ni": "Ni",
 }
 
+
 def to_int_or_none(v):
     try:
         return int(v) if v not in ("", None) else None
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return None
+
 
 def to_float_or_none(v):
     try:
@@ -70,8 +73,9 @@ def to_float_or_none(v):
         if math.isnan(val):
             return None
         return val
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return None
+
 
 def normalize_str(v):
     if v is None:
@@ -82,10 +86,13 @@ def normalize_str(v):
 
 
 import os
+
 from fastapi import HTTPException
-from app.schemas import UploadResponse, CalculateResponse
+
+from app.schemas import CalculateResponse
 
 UPLOAD_DIR = "data/uploads"
+
 
 def _parse_save_and_finalize(task_id: str, file_id: str, contents: bytes, filename: str):
     """Background task: parse uploaded file bytes, save parsed rows to disk, and update task status."""
@@ -128,7 +135,9 @@ def _parse_save_and_finalize(task_id: str, file_id: str, contents: bytes, filena
 
         logger.info(
             "[BREADCRUMB] Saved %d rows from '%s' for task %s",
-            len(rows), filename, task_id,
+            len(rows),
+            filename,
+            task_id,
         )
 
         task.status = "completed"
@@ -154,9 +163,7 @@ def _parse_save_and_finalize(task_id: str, file_id: str, contents: bytes, filena
 
 @router.post("/upload/", response_model=TaskAcceptedResponse, status_code=202)
 async def upload_file(
-    background_tasks: BackgroundTasks,
-    file: UploadFile = File(...),
-    db: Session = Depends(models.get_db)
+    background_tasks: BackgroundTasks, file: UploadFile = File(...), db: Session = Depends(models.get_db)
 ):
     """
     Accept a CSV, JSON, PDF, or Excel file and queue it for asynchronous parsing
@@ -166,7 +173,9 @@ async def upload_file(
     filename = file.filename or ""
     content_type = file.content_type or ""
 
-    if content_type not in file_parser.ALLOWED_CONTENT_TYPES and not filename.endswith(('.csv', '.json', '.xls', '.xlsx', '.pdf')):
+    if content_type not in file_parser.ALLOWED_CONTENT_TYPES and not filename.endswith(
+        (".csv", ".json", ".xls", ".xlsx", ".pdf")
+    ):
         raise HTTPException(
             status_code=415,
             detail="Unsupported file type. Please upload a CSV, JSON, PDF, or Excel file.",
@@ -191,14 +200,10 @@ async def upload_file(
     db.commit()
 
     logger.info("[BREADCRUMB] Created task %s for file '%s', queueing background parse", task_id, filename)
-    background_tasks.add_task(
-        _parse_save_and_finalize, task_id, file_id, contents, filename
-    )
+    background_tasks.add_task(_parse_save_and_finalize, task_id, file_id, contents, filename)
 
-    return TaskAcceptedResponse(
-        task_id=task_id,
-        poll_url=f"/api/v1/tasks/{task_id}"
-    )
+    return TaskAcceptedResponse(task_id=task_id, poll_url=f"/api/v1/tasks/{task_id}")
+
 
 @router.post("/calculate/{file_id}", response_model=CalculateResponse)
 def calculate_file(
@@ -210,13 +215,13 @@ def calculate_file(
     Runs synchronously in FastAPI's external threadpool to avoid blocking the event loop.
     """
     filepath = os.path.join(UPLOAD_DIR, f"{file_id}.json")
-            
+
     if not os.path.exists(filepath):
         raise HTTPException(status_code=404, detail="Uploaded file not found or expired.")
-        
-    with open(filepath, "r") as f:
+
+    with open(filepath) as f:
         rows = json.load(f)
-    
+
     # Pre-process coordinates for bulk reverse geocoding
     coords_to_geocode = []
     valid_indices = []
@@ -235,7 +240,7 @@ def calculate_file(
         rg_results = []
         chunk_size = 500
         for i in range(0, len(coords_to_geocode), chunk_size):
-            chunk = coords_to_geocode[i:i+chunk_size]
+            chunk = coords_to_geocode[i : i + chunk_size]
             rg_results.extend(rg.search(chunk, mode=1))
 
         for i, res in zip(valid_indices, rg_results, strict=True):
@@ -300,8 +305,12 @@ def calculate_file(
                 parameters[param_key] = val
 
         if (
-            not state and not district and not location
-            and lon_val is None and lat_val is None and year_val is None
+            not state
+            and not district
+            and not location
+            and lon_val is None
+            and lat_val is None
+            and year_val is None
             and not parameters
         ):
             continue
@@ -343,7 +352,9 @@ def calculate_file(
         # ── Document Reduced Parameter Set ────────────────────────
         missing_metals = calculation_service.get_missing_metals(metals_mgL, calculation_service.BIS_LIMITS_METALS)
         if missing_metals:
-            issues.append(f"Historical index was computed with a reduced parameter set (Missing: {', '.join(missing_metals)}).")
+            issues.append(
+                f"Historical index was computed with a reduced parameter set (Missing: {', '.join(missing_metals)})."
+            )
 
         sample = models.WaterSample(
             village_code=village_code,
@@ -373,7 +384,7 @@ def calculate_file(
 
     # Invalidate caches after successful upload
     invalidate_cache()
-    
+
     # Try to clean up the file
     try:
         os.remove(filepath)

@@ -34,10 +34,12 @@ class Settings:
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./water_quality.db")
 
     # --- CORS ---
-    CORS_ORIGINS: list[str] = field(default_factory=lambda: _csv_list(
-        "CORS_ORIGINS",
-        "http://localhost:5173,http://127.0.0.1:8000",
-    ))
+    CORS_ORIGINS: list[str] = field(
+        default_factory=lambda: _csv_list(
+            "CORS_ORIGINS",
+            "http://localhost:5173,http://127.0.0.1:8000",
+        )
+    )
 
     # --- Upload limits ---
     MAX_UPLOAD_SIZE_BYTES: int = int(os.getenv("MAX_UPLOAD_SIZE_BYTES", str(10 * 1024 * 1024)))  # 10 MB
@@ -46,9 +48,7 @@ class Settings:
     RATE_LIMIT_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
 
     # --- Trusted hosts (empty = allow all) ---
-    TRUSTED_HOSTS: list[str] = field(default_factory=lambda: _csv_list(
-        "TRUSTED_HOSTS", "*"
-    ))
+    TRUSTED_HOSTS: list[str] = field(default_factory=lambda: _csv_list("TRUSTED_HOSTS", "*"))
 
     # --- Third-party integrations (secrets via env only) ---
     SENDGRID_API_KEY: str = os.getenv("SENDGRID_API_KEY", "")

@@ -17,11 +17,13 @@ from app.standards import STANDARDS
 WHO_LIMITS_METALS = {k: v["Si"] for k, v in STANDARDS.get("WHO", {}).items() if "Si" in v}
 BIS_LIMITS_METALS = {k: v["Si"] for k, v in STANDARDS.get("BIS", {}).items() if "Si" in v}
 
+
 def safe_div(a: float, b: float):
     try:
         return a / b if b else None
     except Exception:
         return None
+
 
 def calc_ci(params: dict[str, float], limits: dict[str, float]) -> dict[str, float]:
     ci: dict[str, float] = {}
@@ -32,13 +34,16 @@ def calc_ci(params: dict[str, float], limits: dict[str, float]) -> dict[str, flo
                 ci[metal] = val
     return ci
 
+
 def calc_ehci(ci: dict[str, float]) -> dict[str, float]:
-    return {m: v ** 2 for m, v in ci.items()}
+    return {m: v**2 for m, v in ci.items()}
+
 
 def calc_hei(ci: dict[str, float]):
     if not ci:
         return None
     return sum(ci.values())
+
 
 def calc_pli(ci: dict[str, float]):
     if not ci:
@@ -52,6 +57,7 @@ def calc_pli(ci: dict[str, float]):
     if product == 0:
         return 0.0
     return product ** (1.0 / len(vals))
+
 
 def calc_hmpi(params: dict[str, float], limits: dict[str, float]):
     numerator = 0.0
@@ -67,6 +73,7 @@ def calc_hmpi(params: dict[str, float], limits: dict[str, float]):
         return None
     return numerator / denominator
 
+
 def calc_hi(params: dict[str, float], rfd: dict[str, float]):
     total = 0.0
     count = 0
@@ -75,6 +82,7 @@ def calc_hi(params: dict[str, float], rfd: dict[str, float]):
             total += params[metal] / R
             count += 1
     return total if count else None
+
 
 def convert_units_for_metals(params: dict[str, Any]) -> dict[str, Any]:
     """
@@ -123,7 +131,7 @@ def predict_hotspots(rows: list[Mapping]) -> list[dict[str, Any]]:
         try:
             lat = float(raw_lat)
             lon = float(raw_lon)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             logger.warning("Skipping row with invalid coordinates: lat=%s, lon=%s", raw_lat, raw_lon)
             continue
 
@@ -135,18 +143,20 @@ def predict_hotspots(rows: list[Mapping]) -> list[dict[str, Any]]:
             if val is not None:
                 try:
                     metal_raw[key] = float(val)
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     pass
 
         metals_mgL = convert_units_for_metals(metal_raw)
 
         if not metals_mgL:
-            results.append({
-                "latitude": lat,
-                "longitude": lon,
-                "risk_score": 0.0,
-                "risk_category": "Unknown",
-            })
+            results.append(
+                {
+                    "latitude": lat,
+                    "longitude": lon,
+                    "risk_score": 0.0,
+                    "risk_category": "Unknown",
+                }
+            )
             continue
 
         # ── Compute risk score via HMPI ────────────────────────────
@@ -162,12 +172,14 @@ def predict_hotspots(rows: list[Mapping]) -> list[dict[str, Any]]:
         else:
             category = "Critical"
 
-        results.append({
-            "latitude": lat,
-            "longitude": lon,
-            "risk_score": risk_score,
-            "risk_category": category,
-        })
+        results.append(
+            {
+                "latitude": lat,
+                "longitude": lon,
+                "risk_score": risk_score,
+                "risk_category": category,
+            }
+        )
 
     logger.info("Predicted %d hotspots from %d rows", len(results), len(rows))
     return results

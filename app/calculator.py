@@ -58,9 +58,7 @@ PERMISSIBLE_VALUES: dict[str, int] = {
     "zinc": 5000,
 }
 
-UNIT_WEIGHTAGE: dict[str, float] = {
-    metal: 1.0 / value for metal, value in PERMISSIBLE_VALUES.items()
-}
+UNIT_WEIGHTAGE: dict[str, float] = {metal: 1.0 / value for metal, value in PERMISSIBLE_VALUES.items()}
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────
@@ -76,7 +74,7 @@ def _safe_value(row: Mapping[str, Any], key: str) -> float | None:
     try:
         if pd.isna(val):
             return None
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         pass
     val = float(val)
     if val < 0:
@@ -299,10 +297,7 @@ def calculate_pmi(row: Mapping[str, Any], standard: str = "BIS") -> float:
     if vt == 0:
         return 0.0
 
-    nspmi = sum(
-        PMI_FACTOR_SCORES.get(symbol, 0.0) * (oi / vt)
-        for symbol, oi in metals.items()
-    )
+    nspmi = sum(PMI_FACTOR_SCORES.get(symbol, 0.0) * (oi / vt) for symbol, oi in metals.items())
 
     pmi = (nspmi - NSPMI_MIN) / (NSPMI_MAX - NSPMI_MIN)
     pmi = max(0.0, pmi)

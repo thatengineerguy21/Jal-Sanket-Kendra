@@ -95,30 +95,34 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._hits[client_ip].append(now)
         return await call_next(request)
 
+
 # ── Detailed Logging Middleware ──────────────────────────────────────────
 class LoggingMiddleware(BaseHTTPMiddleware):
     """
     Log all incoming requests and outgoing responses in detail.
     Filters out sensitive headers like Authorization and Cookie.
     """
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         client_ip = request.client.host if request.client else "unknown"
         method = request.method
         url = str(request.url)
         headers = dict(request.headers)
-        
+
         # Scrub sensitive headers
         for secret_header in ["authorization", "cookie", "x-api-key"]:
             if secret_header in headers:
                 headers[secret_header] = "***REDACTED***"
-                
+
         logger.info(f"Incoming Request: {method} {url} from {client_ip} | Headers: {headers}")
-        
+
         start_time = time.time()
         try:
             response = await call_next(request)
             process_time = time.time() - start_time
-            logger.info(f"Outgoing Response: {method} {url} - Status: {response.status_code} - Completed in {process_time:.4f}s")
+            logger.info(
+                f"Outgoing Response: {method} {url} - Status: {response.status_code} - Completed in {process_time:.4f}s"
+            )
             return response
         except Exception as e:
             process_time = time.time() - start_time

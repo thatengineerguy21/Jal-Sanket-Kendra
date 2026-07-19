@@ -1,6 +1,6 @@
 import sqlite3
 
-conn = sqlite3.connect('water_quality.db')
+conn = sqlite3.connect("water_quality.db")
 cursor = conn.cursor()
 cursor.execute("PRAGMA table_info(water_samples)")
 for row in cursor.fetchall():
@@ -9,6 +9,7 @@ for row in cursor.fetchall():
 import sqlite3
 
 DB_PATH = "D:/Code/Projects/Jal-Sanket-Kendra/water_quality.db"
+
 
 def list_tables():
     """List all tables in the SQLite database."""
@@ -32,6 +33,7 @@ def list_tables():
     finally:
         if conn:
             conn.close()
+
 
 def describe_table(table_name):
     """Show the schema (columns and types) of a specific table."""
@@ -62,6 +64,7 @@ def describe_table(table_name):
     finally:
         if conn:
             conn.close()
+
 
 if __name__ == "__main__":
     tables = list_tables()

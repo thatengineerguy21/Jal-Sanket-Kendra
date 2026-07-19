@@ -59,10 +59,12 @@ class UploadResponse(BaseModel):
     file_id: str
     filename: str
 
+
 class CalculateResponse(BaseModel):
     message: str
     rows_processed: int
     rows_inserted: int
+
 
 class MapPointResponse(BaseModel):
     id: int
@@ -93,12 +95,14 @@ class IndicesSummary(BaseModel):
 # ── Quick Calculator ───────────────────────────────────────────────────
 class QuickCalcRequest(BaseModel):
     """Request body for the quick calculator endpoint."""
+
     metals: dict[str, float]
     standard: str = "BIS"
 
 
 class QuickCalcResponse(BaseModel):
     """Response from the quick calculator endpoint."""
+
     indices: dict[str, Any]
     standard: str
     reduced_parameter_set: bool = False
@@ -137,6 +141,7 @@ class HealthResponse(BaseModel):
 # ── Background Tasks ───────────────────────────────────────────────────
 class TaskAcceptedResponse(BaseModel):
     """Returned immediately when an upload is accepted for background processing."""
+
     task_id: str
     status: str = "pending"
     poll_url: str
@@ -144,6 +149,7 @@ class TaskAcceptedResponse(BaseModel):
 
 class TaskStatusResponse(BaseModel):
     """Full status of a background task, returned by the polling endpoint."""
+
     task_id: str
     status: str  # pending | processing | completed | failed
     progress: int = 0
@@ -153,4 +159,3 @@ class TaskStatusResponse(BaseModel):
     updated_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
-

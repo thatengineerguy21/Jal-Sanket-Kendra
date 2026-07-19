@@ -75,9 +75,7 @@ _COORDINATE_COLUMNS: set[str] = {
     "coordinates.coordinates[0]",
     "coordinates.coordinates[1]",
 }
-_PARAMETER_COLUMNS: set[str] = {
-    c for c in REQUIRED_COLUMNS if c.startswith("parameters.")
-}
+_PARAMETER_COLUMNS: set[str] = {c for c in REQUIRED_COLUMNS if c.startswith("parameters.")}
 
 _CSV_TYPES = {"text/csv"}
 _JSON_TYPES = {"application/json"}
@@ -88,6 +86,7 @@ _EXCEL_TYPES = {
 }
 
 ALLOWED_CONTENT_TYPES = _CSV_TYPES | _JSON_TYPES | _PDF_TYPES | _EXCEL_TYPES
+
 
 async def parse_upload(
     file: UploadFile,
@@ -105,7 +104,7 @@ async def parse_upload(
     content_type = file.content_type or ""
 
     filename = file.filename or ""
-    if content_type not in allowed_types and not filename.endswith(('.csv', '.json', '.xls', '.xlsx', '.pdf')):
+    if content_type not in allowed_types and not filename.endswith((".csv", ".json", ".xls", ".xlsx", ".pdf")):
         raise HTTPException(
             status_code=415,
             detail="Unsupported file type. Please upload a CSV, JSON, PDF, or Excel file.",
@@ -122,6 +121,7 @@ async def parse_upload(
         return await asyncio.to_thread(parse_bytes_direct, contents, filename, validate_columns)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
 
 from collections.abc import Callable
 
@@ -148,8 +148,7 @@ def parse_bytes_direct(
 
         if missing:
             logger.info(
-                "Upload '%s' is missing %d optional column(s); proceeding "
-                "anyway. Missing: %s",
+                "Upload '%s' is missing %d optional column(s); proceeding anyway. Missing: %s",
                 filename,
                 len(missing),
                 ", ".join(sorted(missing)),
@@ -164,11 +163,8 @@ def parse_bytes_direct(
 def _has_minimum_signal(columns: set[str]) -> bool:
     """True if *columns* contains at least one location, coordinate, or
     measured-parameter field — i.e. there's something worth ingesting."""
-    return bool(
-        (columns & _LOCATION_COLUMNS)
-        or (columns & _COORDINATE_COLUMNS)
-        or (columns & _PARAMETER_COLUMNS)
-    )
+    return bool((columns & _LOCATION_COLUMNS) or (columns & _COORDINATE_COLUMNS) or (columns & _PARAMETER_COLUMNS))
+
 
 def _parse_bytes(
     data: bytes,
@@ -185,6 +181,7 @@ def _parse_bytes(
 
         if filename.endswith(".pdf") or content_type in _PDF_TYPES:
             from app.services.pdf_parser import parse_pdf_bytes
+
             return parse_pdf_bytes(data, filename, progress_callback=progress_callback)
 
         if filename.endswith((".xls", ".xlsx")) or content_type in _EXCEL_TYPES:
@@ -192,8 +189,6 @@ def _parse_bytes(
 
     except Exception as exc:
         logger.exception("File parse error")
-        raise ValueError(
-            "Error processing file: unable to parse the uploaded data."
-        ) from exc
+        raise ValueError("Error processing file: unable to parse the uploaded data.") from exc
 
     raise ValueError("Unsupported file type.")

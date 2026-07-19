@@ -25,40 +25,37 @@ STANDARDS: dict[str, dict[str, dict[str, float]]] = {
     # ----------------------------------------------------------
     "BIS": {
         # Toxic metals
-        "Pb": {"Si": 0.01, "Ii": 0.01},    # Lead (No Relaxation)
-        "Cd": {"Si": 0.003, "Ii": 0.003},   # Cadmium (No Relaxation)
-        "Cr": {"Si": 0.05, "Ii": 0.05},     # Total Chromium (No Relaxation)
-        "As": {"Si": 0.01, "Ii": 0.01},     # Arsenic (No Relaxation)
-        "Hg": {"Si": 0.001, "Ii": 0.001},   # Mercury (No Relaxation)
-        "Ni": {"Si": 0.02, "Ii": 0.02},     # Nickel (No Relaxation)
-        "U":  {"Si": 0.03, "Ii": 0.03},     # Uranium (No Relaxation)
-
+        "Pb": {"Si": 0.01, "Ii": 0.01},  # Lead (No Relaxation)
+        "Cd": {"Si": 0.003, "Ii": 0.003},  # Cadmium (No Relaxation)
+        "Cr": {"Si": 0.05, "Ii": 0.05},  # Total Chromium (No Relaxation)
+        "As": {"Si": 0.01, "Ii": 0.01},  # Arsenic (No Relaxation)
+        "Hg": {"Si": 0.001, "Ii": 0.001},  # Mercury (No Relaxation)
+        "Ni": {"Si": 0.02, "Ii": 0.02},  # Nickel (No Relaxation)
+        "U": {"Si": 0.03, "Ii": 0.03},  # Uranium (No Relaxation)
         # Aesthetic/Essential metals
-        "Fe": {"Si": 0.3, "Ii": 0.3},       # Iron (No Relaxation)
-        "Mn": {"Si": 0.3, "Ii": 0.1},       # Manganese
-        "Zn": {"Si": 15.0, "Ii": 5.0},      # Zinc
-        "Cu": {"Si": 1.5, "Ii": 0.05},      # Copper
+        "Fe": {"Si": 0.3, "Ii": 0.3},  # Iron (No Relaxation)
+        "Mn": {"Si": 0.3, "Ii": 0.1},  # Manganese
+        "Zn": {"Si": 15.0, "Ii": 5.0},  # Zinc
+        "Cu": {"Si": 1.5, "Ii": 0.05},  # Copper
     },
-
     # ----------------------------------------------------------
     # WHO Drinking Water Guidelines (Based on CPCB 2019 Data)
     # Si = Standard Limit (Guideline Value)
     # Ii = 0.0 (WHO does not use a secondary acceptable limit)
     # ----------------------------------------------------------
     "WHO": {
-        "Pb": {"Si": 0.01, "Ii": 0.0},      # Lead
-        "Cd": {"Si": 0.003, "Ii": 0.0},     # Cadmium
-        "Cr": {"Si": 0.05, "Ii": 0.0},      # Chromium
-        "As": {"Si": 0.01, "Ii": 0.0},      # Arsenic
-        "Hg": {"Si": 0.006, "Ii": 0.0},     # Mercury
-        "Ni": {"Si": 0.07, "Ii": 0.0},      # Nickel
-        "U":  {"Si": 0.015, "Ii": 0.0},     # Uranium
-
+        "Pb": {"Si": 0.01, "Ii": 0.0},  # Lead
+        "Cd": {"Si": 0.003, "Ii": 0.0},  # Cadmium
+        "Cr": {"Si": 0.05, "Ii": 0.0},  # Chromium
+        "As": {"Si": 0.01, "Ii": 0.0},  # Arsenic
+        "Hg": {"Si": 0.006, "Ii": 0.0},  # Mercury
+        "Ni": {"Si": 0.07, "Ii": 0.0},  # Nickel
+        "U": {"Si": 0.015, "Ii": 0.0},  # Uranium
         # Aesthetic / Health Guidelines
-        "Fe": {"Si": 0.3, "Ii": 0.0},       # Iron
-        "Mn": {"Si": 0.4, "Ii": 0.0},       # Manganese
-        "Zn": {"Si": 3.0, "Ii": 0.0},       # Zinc
-        "Cu": {"Si": 2.0, "Ii": 0.0},       # Copper
+        "Fe": {"Si": 0.3, "Ii": 0.0},  # Iron
+        "Mn": {"Si": 0.4, "Ii": 0.0},  # Manganese
+        "Zn": {"Si": 3.0, "Ii": 0.0},  # Zinc
+        "Cu": {"Si": 2.0, "Ii": 0.0},  # Copper
     },
 }
 
@@ -73,7 +70,7 @@ EHCI_WEIGHTS: dict[str, float] = {
     "Ni": 0.107,
     "Cr": 0.089,
     "Cu": 0.054,
-    "U":  0.054,
+    "U": 0.054,
     "Mn": 0.036,
     "Zn": 0.018,
     "Fe": 0.018,
@@ -88,7 +85,7 @@ HMI_WEIGHTS: dict[str, float] = {
     "Ni": 0.10,
     "Cr": 0.08,
     "Cu": 0.06,
-    "U":  0.05,
+    "U": 0.05,
     "Mn": 0.04,
     "Zn": 0.03,
     "Fe": 0.03,
@@ -103,7 +100,7 @@ PMI_FACTOR_SCORES: dict[str, float] = {
     "Ni": 0.10,
     "Cr": 0.09,
     "Cu": 0.07,
-    "U":  0.06,
+    "U": 0.06,
     "Mn": 0.05,
     "Zn": 0.03,
     "Fe": 0.03,
@@ -127,5 +124,5 @@ RFD: dict[str, float] = {
     "Cr": 0.003,
     "Ni": 0.02,
     "Hg": 0.0003,
-    "U":  0.0006,
+    "U": 0.0006,
 }

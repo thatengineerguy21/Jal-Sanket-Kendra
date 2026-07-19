@@ -55,10 +55,10 @@ class _DevFormatter(logging.Formatter):
     """Coloured single-line ANSI output for terminal development."""
 
     LEVEL_COLORS = {
-        "DEBUG": "\033[36m",        # Cyan
-        "INFO": "\033[32m",         # Green
-        "WARNING": "\033[33m",      # Yellow
-        "ERROR": "\033[31m",        # Red
+        "DEBUG": "\033[36m",  # Cyan
+        "INFO": "\033[32m",  # Green
+        "WARNING": "\033[33m",  # Yellow
+        "ERROR": "\033[31m",  # Red
         "CRITICAL": "\033[1;\033[31m",  # Bold Red
     }
     RESET = "\033[0m"

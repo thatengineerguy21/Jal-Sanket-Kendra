@@ -83,8 +83,20 @@ COLUMN_HEURISTICS: dict[str, list[str]] = {
 # whose header was split across two rows, e.g. "Parameter" / "mg/L").
 # These should never be treated as a parameter name in their own right.
 _BARE_UNIT_HEADERS = {
-    "mg/l", "mgl", "ppm", "ppb", "ug/l", "ugl", "µg/l", "meq/l",
-    "mmhos/cm", "µmhos/cm", "umhos/cm", "us/cm", "µs/cm", "ds/m",
+    "mg/l",
+    "mgl",
+    "ppm",
+    "ppb",
+    "ug/l",
+    "ugl",
+    "µg/l",
+    "meq/l",
+    "mmhos/cm",
+    "µmhos/cm",
+    "umhos/cm",
+    "us/cm",
+    "µs/cm",
+    "ds/m",
 }
 
 _HEADER_WS_RE = re.compile(r"\s+")
@@ -150,8 +162,16 @@ def map_column(col_name) -> str | None:
 # to record it for index calculations); the latter should stay blank
 # rather than being silently coerced to zero or dropped.
 _ZERO_TOKENS = {
-    "bdl", "nd", "n.d", "n.d.", "nil", "below detection limit",
-    "below detectable limit", "not detected", "<dl", "below dl",
+    "bdl",
+    "nd",
+    "n.d",
+    "n.d.",
+    "nil",
+    "below detection limit",
+    "below detectable limit",
+    "not detected",
+    "<dl",
+    "below dl",
 }
 _BLANK_TOKENS = {"-", "--", "na", "n/a", "not available", "not tested", "nt"}
 
@@ -175,7 +195,7 @@ def clean_numeric_cell(val):
         try:
             if pd.isna(val):
                 return None
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             pass
         return float(val)
 
@@ -213,7 +233,7 @@ def clean_coordinate_cell(val):
         try:
             if pd.isna(val):
                 return None
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             pass
         return float(val)
 
@@ -273,7 +293,7 @@ def _clean_table_values(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def extract_year_from_filename(filename: str) -> int:
-    match = re.search(r'(20\d{2})', filename)
+    match = re.search(r"(20\d{2})", filename)
     if match:
         return int(match.group(1))
     return 2023
@@ -357,8 +377,11 @@ def parse_pdf_bytes(
         mapped_columns = {col: map_column(col) for col in original_columns}
         mapped_columns = {k: v for k, v in mapped_columns.items() if v}
 
-        if not mapped_columns and last_good_raw_columns is not None \
-                and len(original_columns) == len(last_good_raw_columns):
+        if (
+            not mapped_columns
+            and last_good_raw_columns is not None
+            and len(original_columns) == len(last_good_raw_columns)
+        ):
             # Likely a continuation page: tabula mistook the first data
             # row for a header because this page never repeated the
             # column titles. Re-apply the previous page's layout and
@@ -372,13 +395,15 @@ def parse_pdf_bytes(
                 logger.info(
                     "Recovered %d column(s) on a likely continuation page "
                     "in '%s' by reusing the previous table's header.",
-                    len(mapped_columns), filename,
+                    len(mapped_columns),
+                    filename,
                 )
 
         if not mapped_columns:
             logger.info(
                 "Skipping a table in '%s' with no recognizable columns: %s",
-                filename, original_columns,
+                filename,
+                original_columns,
             )
             continue
 
@@ -406,7 +431,7 @@ def parse_pdf_bytes(
     if not all_records:
         raise HTTPException(
             status_code=400,
-            detail="No tabular data matching required fields (e.g., location, lat, lon, Fe, As, U) could be extracted."
+            detail="No tabular data matching required fields (e.g., location, lat, lon, Fe, As, U) could be extracted.",
         )
 
     combined_df = pd.concat(all_records, ignore_index=True)

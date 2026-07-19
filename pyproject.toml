@@ -28,6 +28,15 @@ dev = [
     "ruff>=0.11.0",
 ]
 
+[dependency-groups]
+dev = [
+    "mypy>=1.16.0",
+    "pre-commit>=4.0.0",
+    "pytest>=9.0.2",
+    "ruff>=0.11.0",
+]
+
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["app", "app.*", "app.routes", "app.routes.*", "app.services", "app.services.*"]

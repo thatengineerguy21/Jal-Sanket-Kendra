@@ -12,13 +12,30 @@ OUTPUT_CSV = "data/cgwb_parsed_output.csv"
 
 # Target columns for the final CSV
 TARGET_COLUMNS = [
-    "village_code", "state", "district", "location", "year",
-    "coordinates.coordinates[0]", "coordinates.coordinates[1]",
-    "parameters.pH", "parameters.EC", "parameters.CO3", "parameters.HCO3",
-    "parameters.Cl", "parameters.F", "parameters.SO4", "parameters.NO3",
-    "parameters.total_hardness", "parameters.Ca", "parameters.Mg",
-    "parameters.Na", "parameters.K", "parameters.Fe", "parameters.U",
-    "parameters.As", "source"
+    "village_code",
+    "state",
+    "district",
+    "location",
+    "year",
+    "coordinates.coordinates[0]",
+    "coordinates.coordinates[1]",
+    "parameters.pH",
+    "parameters.EC",
+    "parameters.CO3",
+    "parameters.HCO3",
+    "parameters.Cl",
+    "parameters.F",
+    "parameters.SO4",
+    "parameters.NO3",
+    "parameters.total_hardness",
+    "parameters.Ca",
+    "parameters.Mg",
+    "parameters.Na",
+    "parameters.K",
+    "parameters.Fe",
+    "parameters.U",
+    "parameters.As",
+    "source",
 ]
 
 # Heuristics for matching PDF columns to target columns
@@ -49,6 +66,7 @@ COLUMN_HEURISTICS = {
     "parameters.As": ["as", "arsenic"],
 }
 
+
 def map_column(col_name: str) -> str:
     """Return the target column name if a heuristic matches, else None."""
     col_lower = str(col_name).lower().strip()
@@ -57,13 +75,16 @@ def map_column(col_name: str) -> str:
             return target_col
     return None
 
+
 def extract_year_from_filename(filename: str) -> int:
     """Attempt to extract year from filename, defaulting to 2023 if not found."""
     import re
-    match = re.search(r'(20\d{2})', filename)
+
+    match = re.search(r"(20\d{2})", filename)
     if match:
         return int(match.group(1))
     return 2023
+
 
 def process_pdfs():
     all_records = []
@@ -82,13 +103,7 @@ def process_pdfs():
         try:
             # multiple_tables=True extracts all tables
             # guess=True tries to guess column boundaries
-            tables = tabula.read_pdf(
-                pdf_file,
-                pages='all',
-                multiple_tables=True,
-                guess=True,
-                encoding="cp1252"
-            )
+            tables = tabula.read_pdf(pdf_file, pages="all", multiple_tables=True, guess=True, encoding="cp1252")
             for i, df in enumerate(tables):
                 if df.empty:
                     continue
@@ -143,6 +158,7 @@ def process_pdfs():
     # Export to CSV
     combined_df.to_csv(OUTPUT_CSV, index=False)
     logging.info("Successfully exported parsed data to %s (Rows: %d)", OUTPUT_CSV, len(combined_df))
+
 
 if __name__ == "__main__":
     process_pdfs()

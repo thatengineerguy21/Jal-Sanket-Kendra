@@ -11,7 +11,7 @@ include_globs = [
     "frontend/web/index.html",
     "frontend/web/vite.config.js",
     "frontend/web/package.json",
-    "pyproject.toml"
+    "pyproject.toml",
 ]
 
 with open(output_file, "w", encoding="utf-8") as out:
@@ -24,12 +24,18 @@ with open(output_file, "w", encoding="utf-8") as out:
 
             ext = os.path.splitext(filepath)[1].lower()
             lang = "text"
-            if ext in [".py"]: lang = "python"
-            elif ext in [".js", ".jsx"]: lang = "javascript"
-            elif ext in [".css"]: lang = "css"
-            elif ext in [".json"]: lang = "json"
-            elif ext in [".html"]: lang = "html"
-            elif ext in [".toml"]: lang = "toml"
+            if ext in [".py"]:
+                lang = "python"
+            elif ext in [".js", ".jsx"]:
+                lang = "javascript"
+            elif ext in [".css"]:
+                lang = "css"
+            elif ext in [".json"]:
+                lang = "json"
+            elif ext in [".html"]:
+                lang = "html"
+            elif ext in [".toml"]:
+                lang = "toml"
 
             out.write(f"```{lang}\n")
             try:

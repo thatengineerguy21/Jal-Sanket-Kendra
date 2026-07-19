@@ -98,10 +98,7 @@ class WaterSample(Base):
         self.validation_issues_json = json.dumps(value)
 
     def __repr__(self) -> str:
-        return (
-            f"<WaterSample id={self.id} location={self.location} "
-            f"year={self.year}>"
-        )
+        return f"<WaterSample id={self.id} location={self.location} year={self.year}>"
 
 
 class AlertConfig(Base):
@@ -117,10 +114,7 @@ class AlertConfig(Base):
     policy_json: str = Column(Text, default="{}")
 
     def __repr__(self) -> str:
-        return (
-            f"<AlertConfig id={self.id} hpi_thr={self.hpi_threshold} "
-            f"cd_thr={self.cd_threshold}>"
-        )
+        return f"<AlertConfig id={self.id} hpi_thr={self.hpi_threshold} cd_thr={self.cd_threshold}>"
 
 
 class TaskStatus(Base):

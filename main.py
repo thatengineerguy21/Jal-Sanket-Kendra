@@ -30,10 +30,10 @@ from app import api
 from app.config import settings
 from app.logging_config import setup_logging
 from app.middleware import (
+    LoggingMiddleware,
     RateLimitMiddleware,
     RequestIDMiddleware,
     SecurityHeadersMiddleware,
-    LoggingMiddleware,
 )
 from app.models import Base, engine
 

@@ -4,7 +4,7 @@ import tabula
 
 pdf_path = sys.argv[1]
 try:
-    tables = tabula.read_pdf(pdf_path, pages='all', multiple_tables=True)
+    tables = tabula.read_pdf(pdf_path, pages="all", multiple_tables=True)
     print(f"Found {len(tables)} tables")
     for i, table in enumerate(tables):
         print(f"--- Table {i} ---")
