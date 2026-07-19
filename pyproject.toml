@@ -14,8 +14,9 @@ dependencies = [
     "prometheus-fastapi-instrumentator>=7.0.0",
     "pydantic>=2.12.5",
     "python-multipart>=0.0.22",
+    "reverse-geocoder>=1.5.1",
     "sqlalchemy>=2.0.46",
-    "tabula-py>=2.9.0",
+    "pdfplumber>=0.11.0",
     "uvicorn>=0.40.0",
 ]
 

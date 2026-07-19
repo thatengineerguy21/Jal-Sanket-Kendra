@@ -95,4 +95,4 @@ local_settings.py
 .DS_Store
 app.txt
 /project-reference
-```
+data/uploads/

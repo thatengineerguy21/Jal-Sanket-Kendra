@@ -138,24 +138,32 @@ function SamplePopup({ sample }) {
         </span>
       </div>
       <div className="space-y-1 text-xs" style={{ color: 'var(--color-text-300)' }}>
-        <div className="flex justify-between">
+        <div className="flex justify-between gap-4 text-right">
           <span>HMPI</span>
           <span className="font-semibold" style={{ color: 'var(--color-text-100)' }}>
             {hmpi != null ? Number(hmpi).toFixed(2) : '—'}
           </span>
         </div>
-        <div className="flex justify-between">
+        <div className="flex justify-between gap-4 text-right">
           <span>HEI</span>
           <span className="font-semibold" style={{ color: 'var(--color-text-100)' }}>
             {hei != null ? Number(hei).toFixed(2) : '—'}
           </span>
         </div>
-        <div className="flex justify-between">
-          <span>Location</span>
+        <div className="flex justify-between gap-4 text-right">
+          <span>Coordinates</span>
           <span className="font-semibold" style={{ color: 'var(--color-text-100)' }}>
             {Number(sample.latitude).toFixed(4)}, {Number(sample.longitude).toFixed(4)}
           </span>
         </div>
+        {(sample.location || sample.district || sample.state) && (
+          <div className="flex justify-between gap-4 text-right mt-2 border-t pt-2" style={{ borderColor: 'var(--glass-border)' }}>
+            <span>Name</span>
+            <span className="font-semibold" style={{ color: 'var(--color-text-100)' }}>
+              {[sample.location, sample.district, sample.state].filter(Boolean).join(', ')}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -280,6 +288,9 @@ function DynamicMapLayer({ preds }) {
       const fauxSample = {
         latitude: s.latitude,
         longitude: s.longitude,
+        location: s.location,
+        district: s.district,
+        state: s.state,
         standards: { BIS: { hmpi: s.hmpi_bis } }
       }
 

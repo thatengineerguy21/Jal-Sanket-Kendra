@@ -15,6 +15,7 @@ export default function DesignSpells() {
 
     // 2. Liquid Ripple Effect on buttons & nav links
     const handleGlobalClick = (e) => {
+      if (!e.target || typeof e.target.closest !== 'function') return;
       const btn = e.target.closest('.btn, .spell-magnetic-item');
       if (!btn) return;
       
@@ -42,6 +43,7 @@ export default function DesignSpells() {
 
     // 3. Magnetic Nav Pill
     const handleMagneticEnter = (e) => {
+      if (!e.target || typeof e.target.closest !== 'function') return;
       const item = e.target.closest('.spell-magnetic-item');
       if (!item) return;
       const wrap = item.closest('.spell-magnetic-wrap');
@@ -65,6 +67,7 @@ export default function DesignSpells() {
     };
 
     const handleMagneticLeave = (e) => {
+      if (!e.target || typeof e.target.closest !== 'function') return;
       const item = e.target.closest('.spell-magnetic-item');
       if (!item) return;
       const wrap = item.closest('.spell-magnetic-wrap');
@@ -78,6 +81,7 @@ export default function DesignSpells() {
 
     // 4. 3D Tilt Effect
     const handleCardMove = (e) => {
+      if (!e.target || typeof e.target.closest !== 'function') return;
       const card = e.target.closest('.spell-tilt-card');
       if (!card) return;
       
@@ -105,6 +109,7 @@ export default function DesignSpells() {
     };
     
     const handleCardLeave = (e) => {
+      if (!e.target || typeof e.target.closest !== 'function') return;
       const card = e.target.closest('.spell-tilt-card');
       if (!card) return;
       card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;

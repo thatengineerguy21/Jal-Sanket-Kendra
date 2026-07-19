@@ -213,6 +213,10 @@ export default function DataView({ samples, setSamples, summary }) {
     }
   }, [summary?.invalid_count, addToast])
 
+  const [uploadedFileId, setUploadedFileId] = useState(null)
+  const [uploadedFileName, setUploadedFileName] = useState('')
+  const [taskProgress, setTaskProgress] = useState(0)
+
   const processUpload = async (file) => {
     if (!file) {
       addToast('Please select a CSV, JSON, PDF, or Excel file.', 'error')
@@ -221,8 +225,9 @@ export default function DataView({ samples, setSamples, summary }) {
     const fd = new FormData()
     fd.append('file', file, file.name)
     setBusy(true)
+    setTaskProgress(0)
     try {
-      const res = await fetch(API(`/api/v1/upload-and-calculate/`), {
+      const res = await fetch(API(`/api/v1/upload/`), {
         method: 'POST',
         body: fd,
       })
@@ -231,7 +236,62 @@ export default function DataView({ samples, setSamples, summary }) {
         throw new Error(errObj.detail || await res.text())
       }
       const data = await res.json()
-      addToast(`Upload successful: ${data.rows_inserted} inserted.`, 'success')
+      addToast(`Parsing started for ${file.name}. Please wait...`, 'info')
+      
+      // Poll for task completion
+      const checkStatus = async () => {
+        try {
+          const sres = await fetch(API(`/api/v1/tasks/${data.task_id}`));
+          if (!sres.ok) throw new Error("Failed to check task status");
+          const sdata = await sres.json();
+          
+          setTaskProgress(sdata.progress || 0);
+
+          if (sdata.status === 'completed') {
+            setUploadedFileId(sdata.result.file_id);
+            setUploadedFileName(sdata.result.filename || file.name);
+            setBusy(false);
+            setTaskProgress(0);
+            addToast(`File ${sdata.result.filename || file.name} loaded and parsed successfully. Click Calculate to process.`, 'success');
+          } else if (sdata.status === 'failed') {
+            setBusy(false);
+            setTaskProgress(0);
+            addToast(`Parsing failed: ${sdata.error_message}`, 'error');
+          } else {
+            // still pending or processing, poll again
+            setTimeout(checkStatus, 1500);
+          }
+        } catch (err) {
+          setBusy(false);
+          setTaskProgress(0);
+          addToast(String(err), 'error');
+        }
+      };
+      
+      setTimeout(checkStatus, 1500);
+      
+    } catch (err) {
+      addToast(String(err), 'error')
+      setBusy(false)
+      setTaskProgress(0)
+    }
+  }
+
+  const handleCalculate = async () => {
+    if (!uploadedFileId) return
+    setBusy(true)
+    try {
+      const res = await fetch(API(`/api/v1/calculate/${uploadedFileId}`), {
+        method: 'POST'
+      })
+      if (!res.ok) {
+        const errObj = await res.json()
+        throw new Error(errObj.detail || await res.text())
+      }
+      const data = await res.json()
+      addToast(`Calculation successful: ${data.rows_inserted} inserted.`, 'success')
+      setUploadedFileId(null)
+      setUploadedFileName('')
       await load() // Refresh data table
     } catch (err) {
       addToast(String(err), 'error')
@@ -399,22 +459,60 @@ export default function DataView({ samples, setSamples, summary }) {
             <div style={{ color: dragOver ? 'var(--color-primary-400)' : 'var(--color-text-500)' }}>
               {icons.dragFile}
             </div>
-            <div className="text-center">
-              <p className="text-sm font-medium" style={{ color: 'var(--color-text-300)' }}>
-                {busy ? (
-                  <span className="flex items-center gap-2">
-                    <span className="spinner" /> Processing...
-                  </span>
-                ) : (
-                  <>
-                    <span style={{ color: 'var(--color-primary-400)' }}>Click to upload</span>
-                    {' '}or drag and drop
-                  </>
-                )}
-              </p>
-              <p className="text-xs mt-1" style={{ color: 'var(--color-text-500)' }}>
-                CSV, JSON, PDF, Excel files supported
-              </p>
+            <div className="text-center w-full px-4">
+              {uploadedFileId ? (
+                <div className="flex flex-col items-center gap-3 w-full" onClick={(e) => e.stopPropagation()}>
+                  <p className="text-sm font-medium" style={{ color: 'var(--color-success-400)' }}>
+                    File Ready: {uploadedFileName}
+                  </p>
+                  <button 
+                    className="btn btn-primary w-full max-w-[200px]" 
+                    onClick={handleCalculate}
+                    disabled={busy}
+                  >
+                    {busy ? <><span className="spinner" /> Calculating...</> : 'Calculate Data'}
+                  </button>
+                  <p className="text-xs mt-2" style={{ color: 'var(--color-text-500)' }}>
+                    Click above or upload a different file
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm font-medium" style={{ color: 'var(--color-text-300)' }}>
+                    {busy ? (
+                      <span className="flex flex-col items-center gap-2 justify-center w-full">
+                        <span className="flex items-center gap-2 justify-center">
+                          <span className="spinner" /> {taskProgress > 0 ? 'Parsing...' : 'Uploading...'}
+                        </span>
+                        {taskProgress > 0 && (
+                          <div className="w-full max-w-[200px] h-1.5 bg-gray-800 rounded-full overflow-hidden mt-2 border border-gray-700/50">
+                            <div 
+                              className="h-full bg-primary-500 rounded-full transition-all duration-300 ease-out"
+                              style={{ 
+                                width: `${taskProgress}%`,
+                                backgroundColor: 'var(--color-primary-400)'
+                              }}
+                            />
+                          </div>
+                        )}
+                        {taskProgress > 0 && (
+                          <span className="text-xs" style={{ color: 'var(--color-text-400)' }}>
+                            {taskProgress}% complete
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <>
+                        <span style={{ color: 'var(--color-primary-400)' }}>Click to upload</span>
+                        {' '}or drag and drop
+                      </>
+                    )}
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--color-text-500)' }}>
+                    CSV, JSON, PDF, Excel files supported
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>

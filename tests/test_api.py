@@ -10,21 +10,21 @@ def test_upload_csv_success(client, db_session):
     )
     file = io.BytesIO(csv_content.encode('utf-8'))
 
+    # Step 1: Upload
     response = client.post(
-        "/api/v1/upload-and-calculate/",
+        "/api/v1/upload/",
         files={"file": ("test.csv", file, "text/csv")}
     )
 
-    # Upload now returns 202 Accepted with a task_id
     assert response.status_code == 202
     data = response.json()
     assert "task_id" in data
     assert data["status"] == "pending"
     assert "poll_url" in data
 
-    # Wait for background thread to finish processing
+    # Wait for background parse to finish
     task_id = data["task_id"]
-    for _ in range(20):
+    for _ in range(120):
         poll = client.get(f"/api/v1/tasks/{task_id}")
         assert poll.status_code == 200
         status = poll.json()
@@ -33,8 +33,14 @@ def test_upload_csv_success(client, db_session):
         time.sleep(0.25)
 
     assert status["status"] == "completed"
-    assert status["result"]["rows_processed"] == 2
-    assert status["result"]["rows_inserted"] == 2
+    file_id = status["result"]["file_id"]
+
+    # Step 2: Calculate
+    calc_response = client.post(f"/api/v1/calculate/{file_id}")
+    assert calc_response.status_code == 200
+    calc_data = calc_response.json()
+    assert calc_data["rows_processed"] == 2
+    assert calc_data["rows_inserted"] == 2
 
 
 def test_upload_json_success(client, db_session):
@@ -53,8 +59,9 @@ def test_upload_json_success(client, db_session):
     """
     file = io.BytesIO(json_content.encode('utf-8'))
 
+    # Step 1: Upload
     response = client.post(
-        "/api/v1/upload-and-calculate/",
+        "/api/v1/upload/",
         files={"file": ("test.json", file, "application/json")}
     )
 
@@ -62,9 +69,9 @@ def test_upload_json_success(client, db_session):
     data = response.json()
     assert "task_id" in data
 
-    # Wait for background processing
+    # Wait for background parse
     task_id = data["task_id"]
-    for _ in range(20):
+    for _ in range(120):
         poll = client.get(f"/api/v1/tasks/{task_id}")
         status = poll.json()
         if status["status"] in ("completed", "failed"):
@@ -72,21 +79,38 @@ def test_upload_json_success(client, db_session):
         time.sleep(0.25)
 
     assert status["status"] == "completed"
-    assert status["result"]["rows_processed"] == 1
-    assert status["result"]["rows_inserted"] == 1
+    file_id = status["result"]["file_id"]
+
+    # Step 2: Calculate
+    calc_response = client.post(f"/api/v1/calculate/{file_id}")
+    assert calc_response.status_code == 200
+    calc_data = calc_response.json()
+    assert calc_data["rows_processed"] == 1
+    assert calc_data["rows_inserted"] == 1
 
 
-def test_upload_missing_column_error(client):
+def test_upload_missing_column_error(client, db_session):
+    """When the file has no recognizable columns, background parsing sets task status to failed."""
     csv_content = "latitude,longitude\n28.7,77.1"
     file = io.BytesIO(csv_content.encode('utf-8'))
 
     response = client.post(
-        "/api/v1/upload-and-calculate/",
+        "/api/v1/upload/",
         files={"file": ("test_bad.csv", file, "text/csv")}
     )
 
-    assert response.status_code == 400
-    assert "Could not find any recognizable location" in response.json()["detail"]
+    assert response.status_code == 202
+    task_id = response.json()["task_id"]
+
+    for _ in range(120):
+        poll = client.get(f"/api/v1/tasks/{task_id}")
+        status = poll.json()
+        if status["status"] in ("completed", "failed"):
+            break
+        time.sleep(0.25)
+
+    assert status["status"] == "failed"
+    assert "Could not find any recognizable location" in status["error_message"]
 
 
 def test_upload_unsupported_file_type(client):
@@ -94,7 +118,7 @@ def test_upload_unsupported_file_type(client):
     file = io.BytesIO(txt_content.encode('utf-8'))
 
     response = client.post(
-        "/api/v1/upload-and-calculate/",
+        "/api/v1/upload/",
         files={"file": ("test.txt", file, "text/plain")}
     )
 
@@ -119,3 +143,33 @@ def test_indices_empty_db(client):
     assert response.status_code == 200
     data = response.json()
     assert data["count"] == 0
+
+
+def test_pdf_parsing_mocked(monkeypatch):
+    """Verify parse_pdf_bytes processes pdfplumber tables correctly."""
+    import pandas as pd
+    from app.services import pdf_parser
+
+    mock_df = pd.DataFrame([
+        {
+            "Village Code": "V100",
+            "State": "Punjab",
+            "District": "Ludhiana",
+            "Location": "Site1",
+            "Year": "2023",
+            "Lat": "30.9",
+            "Lon": "75.85",
+            "Fe": "0.15",
+            "As": "0.005",
+            "U": "0.01",
+        }
+    ])
+
+    monkeypatch.setattr(pdf_parser, "_read_tables_with_pdfplumber", lambda data: [mock_df])
+
+    result_df = pdf_parser.parse_pdf_bytes(b"dummy_pdf_content", "test_report_2023.pdf")
+    assert len(result_df) == 1
+    assert result_df["village_code"].iloc[0] == "V100"
+    assert result_df["state"].iloc[0] == "Punjab"
+    assert result_df["parameters.Fe"].iloc[0] == 0.15
+

@@ -33,6 +33,7 @@ from app.middleware import (
     RateLimitMiddleware,
     RequestIDMiddleware,
     SecurityHeadersMiddleware,
+    LoggingMiddleware,
 )
 from app.models import Base, engine
 
@@ -91,7 +92,10 @@ app.add_middleware(SecurityHeadersMiddleware)
 # 4. Request-ID
 app.add_middleware(RequestIDMiddleware)
 
-# 5. Rate limiting
+# 5. Logging
+app.add_middleware(LoggingMiddleware)
+
+# 6. Rate limiting
 app.add_middleware(
     RateLimitMiddleware,
     max_requests=settings.RATE_LIMIT_PER_MINUTE,

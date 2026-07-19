@@ -30,7 +30,7 @@ import logging
 import re
 
 import pandas as pd
-import tabula
+import pdfplumber
 from fastapi import HTTPException
 
 from app.services.file_parser import REQUIRED_COLUMNS as TARGET_COLUMNS
@@ -279,39 +279,32 @@ def extract_year_from_filename(filename: str) -> int:
     return 2023
 
 
-def _read_tables_with_tabula(data: bytes) -> list[pd.DataFrame]:
+def _read_tables_with_pdfplumber(data: bytes) -> list[pd.DataFrame]:
     """
-    Try a couple of tabula extraction strategies, since a single mode
-    doesn't reliably handle every PDF layout: ``guess=True`` (lattice/
-    stream auto-detection) works for most well-formed tables, but some
-    reports need an explicit ``stream=True`` to find columns that
-    aren't ruled off with visible borders.
+    Extract tables from a PDF byte stream using pdfplumber (pure Python,
+    no JVM/subprocess dependencies or deadlock risks).
     """
-    attempts = [
-        {"guess": True},
-        {"guess": False, "stream": True},
-        {"guess": False, "lattice": True},
-    ]
-    last_exc: Exception | None = None
-    for opts in attempts:
-        try:
-            tables = tabula.read_pdf(
-                io.BytesIO(data),
-                pages="all",
-                multiple_tables=True,
-                pandas_options={"dtype": str},
-                encoding="cp1252",
-                java_options=["-Xmx1024m"],
-                **opts,
-            )
-        except Exception as exc:  # noqa: BLE001 - tabula raises a variety of types
-            last_exc = exc
-            continue
-        if tables:
-            return tables
-    if last_exc is not None:
-        logger.warning("All tabula extraction strategies failed: %s", last_exc)
-    return []
+    logger.info("[BREADCRUMB] Starting pdfplumber PDF table extraction")
+    dfs: list[pd.DataFrame] = []
+    try:
+        with pdfplumber.open(io.BytesIO(data)) as pdf:
+            logger.info("[BREADCRUMB] PDF opened with %d page(s)", len(pdf.pages))
+            for p_idx, page in enumerate(pdf.pages):
+                tables = page.extract_tables()
+                logger.info("[BREADCRUMB] Page %d/%d produced %d raw table(s)", p_idx + 1, len(pdf.pages), len(tables))
+                for t in tables:
+                    if not t or len(t) == 0:
+                        continue
+                    header = t[0]
+                    rows = t[1:]
+                    if not rows and not header:
+                        continue
+                    df = pd.DataFrame(rows, columns=header, dtype=str)
+                    dfs.append(df)
+    except Exception as exc:
+        logger.exception("[BREADCRUMB] Error extracting tables with pdfplumber")
+        raise HTTPException(status_code=400, detail="Error reading PDF file structure.") from exc
+    return dfs
 
 
 def parse_pdf_bytes(data: bytes, filename: str) -> pd.DataFrame:
@@ -320,13 +313,14 @@ def parse_pdf_bytes(data: bytes, filename: str) -> pd.DataFrame:
     the varying headers into the standard format, clean lab-report
     shorthand out of the values, and return a concatenated DataFrame.
     """
+    logger.info("[BREADCRUMB] Entering parse_pdf_bytes for '%s'", filename)
     default_year = extract_year_from_filename(filename)
     all_records = []
 
     try:
-        tables = _read_tables_with_tabula(data)
+        tables = _read_tables_with_pdfplumber(data)
     except Exception as exc:
-        logger.exception("Failed to parse PDF bytes using tabula.")
+        logger.exception("Failed to parse PDF bytes using pdfplumber.")
         raise HTTPException(status_code=400, detail="Error reading PDF file structure.") from exc
 
     if not tables:

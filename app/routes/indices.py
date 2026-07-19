@@ -84,7 +84,10 @@ async def get_map_points(
         models.WaterSample.id,
         models.WaterSample.latitude,
         models.WaterSample.longitude,
-        models.WaterSample.hmpi_bis
+        models.WaterSample.hmpi_bis,
+        models.WaterSample.state,
+        models.WaterSample.district,
+        models.WaterSample.location,
     ).filter(models.WaterSample.latitude.isnot(None), models.WaterSample.longitude.isnot(None))
 
     if bbox:
@@ -103,7 +106,15 @@ async def get_map_points(
     results = query.limit(50000).all()
 
     points = [
-        {"id": r[0], "latitude": r[1], "longitude": r[2], "hmpi_bis": r[3]}
+        {
+            "id": r[0],
+            "latitude": r[1],
+            "longitude": r[2],
+            "hmpi_bis": r[3],
+            "state": r[4],
+            "district": r[5],
+            "location": r[6]
+        }
         for r in results
     ]
 

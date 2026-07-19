@@ -8,6 +8,7 @@ reusable module.
 
 from __future__ import annotations
 
+import asyncio
 import io
 import logging
 
@@ -117,7 +118,13 @@ async def parse_upload(
             detail=f"File too large. Maximum allowed size is {settings.MAX_UPLOAD_SIZE_BYTES} bytes.",
         )
 
-    df = _parse_bytes(contents, filename, content_type)
+    try:
+        return await asyncio.to_thread(parse_bytes_direct, contents, filename, validate_columns)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+def parse_bytes_direct(contents: bytes, filename: str, validate_columns: bool = True) -> list[dict]:
+    df = _parse_bytes(contents, filename, "")
     df.columns = df.columns.str.strip()
 
     if validate_columns:
@@ -125,28 +132,17 @@ async def parse_upload(
         missing = set(REQUIRED_COLUMNS) - df_cols
 
         if not _has_minimum_signal(df_cols):
-            # Nothing we recognize at all — this almost certainly means
-            # the wrong file was uploaded, or extraction failed entirely,
-            # rather than "a few optional fields are missing". This is
-            # the only case worth a hard rejection.
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "Could not find any recognizable location, coordinate, "
-                    "or water-quality columns in this file. Detected "
-                    f"columns: {', '.join(sorted(df_cols)) or '(none)'}."
-                ),
+            raise ValueError(
+                "Could not find any recognizable location, coordinate, "
+                "or water-quality columns in this file. Detected "
+                f"columns: {', '.join(sorted(df_cols)) or '(none)'}."
             )
 
         if missing:
-            # Partial data is still useful — log it for diagnostics and
-            # let the row-level validation (see app/routes/upload.py)
-            # flag specific gaps per-record instead of rejecting the
-            # whole upload outright.
             logger.info(
                 "Upload '%s' is missing %d optional column(s); proceeding "
                 "anyway. Missing: %s",
-                file.filename,
+                filename,
                 len(missing),
                 ", ".join(sorted(missing)),
             )
@@ -181,13 +177,10 @@ def _parse_bytes(data: bytes, filename: str, content_type: str) -> pd.DataFrame:
         if filename.endswith((".xls", ".xlsx")) or content_type in _EXCEL_TYPES:
             return pd.read_excel(io.BytesIO(data))
 
-    except HTTPException:
-        raise
     except Exception as exc:
         logger.exception("File parse error")
-        raise HTTPException(
-            status_code=400,
-            detail="Error processing file: unable to parse the uploaded data.",
+        raise ValueError(
+            "Error processing file: unable to parse the uploaded data."
         ) from exc
 
-    raise HTTPException(status_code=415, detail="Unsupported file type.")
+    raise ValueError("Unsupported file type.")

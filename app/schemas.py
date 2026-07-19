@@ -55,11 +55,23 @@ class PaginatedSampleResponse(BaseModel):
     items: list[SampleResponse]
 
 
+class UploadResponse(BaseModel):
+    file_id: str
+    filename: str
+
+class CalculateResponse(BaseModel):
+    message: str
+    rows_processed: int
+    rows_inserted: int
+
 class MapPointResponse(BaseModel):
     id: int
     latitude: float
     longitude: float
     hmpi_bis: float | None = None
+    state: str | None = None
+    district: str | None = None
+    location: str | None = None
 
 
 class MapResponse(BaseModel):
