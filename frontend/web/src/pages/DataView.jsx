@@ -258,8 +258,8 @@ export default function DataView({ samples, setSamples, summary }) {
             setTaskProgress(0);
             addToast(`Parsing failed: ${sdata.error_message}`, 'error');
           } else {
-            // still pending or processing, poll again faster for responsive progress bar
-            setTimeout(checkStatus, 400);
+            // still pending or processing, poll again at a 800ms cadence
+            setTimeout(checkStatus, 800);
           }
         } catch (err) {
           setBusy(false);
@@ -268,7 +268,7 @@ export default function DataView({ samples, setSamples, summary }) {
         }
       };
       
-      setTimeout(checkStatus, 400);
+      setTimeout(checkStatus, 800);
       
     } catch (err) {
       addToast(String(err), 'error')

@@ -72,6 +72,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._hits: dict[str, list[float]] = defaultdict(list)
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        path = request.url.path
+        # Background task polling and health endpoints should not consume rate limit tokens
+        if path.startswith("/api/v1/tasks/") or path in ("/api/v1/health", "/health", "/metrics"):
+            return await call_next(request)
+
         client_ip = request.client.host if request.client else "unknown"
         now = time.time()
         window_start = now - self._window
