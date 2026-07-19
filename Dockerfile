@@ -30,11 +30,10 @@ FROM python:3.14-slim AS runtime
 RUN groupadd -g 1001 appgroup && \
     useradd -u 1001 -g appgroup -m -s /bin/bash appuser
 
-# System deps for pandas/tabula (Java for tabula-py PDF parsing)
+# System deps for runtime (curl for container HEALTHCHECK)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         curl \
-        default-jre-headless \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -51,8 +50,8 @@ COPY tests/ ./tests/
 # Copy built frontend from Stage 1
 COPY --from=frontend-build /build/static ./frontend/static/
 
-# Create data directory for SQLite (writable by appuser)
-RUN mkdir -p /app/data && chown -R appuser:appgroup /app/data
+# Create data/uploads and logs directories for SQLite and upload storage (writable by appuser)
+RUN mkdir -p /app/data/uploads /app/logs && chown -R appuser:appgroup /app/data /app/logs /app/frontend
 
 # Set ownership of app files
 RUN chown -R appuser:appgroup /app
