@@ -165,7 +165,7 @@ def test_pdf_parsing_mocked(monkeypatch):
         }
     ])
 
-    monkeypatch.setattr(pdf_parser, "_read_tables_with_pdfplumber", lambda data: [mock_df])
+    monkeypatch.setattr(pdf_parser, "_read_tables_with_pdfplumber", lambda data, **kwargs: [mock_df])
 
     result_df = pdf_parser.parse_pdf_bytes(b"dummy_pdf_content", "test_report_2023.pdf")
     assert len(result_df) == 1

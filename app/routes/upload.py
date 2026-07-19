@@ -101,11 +101,20 @@ def _parse_save_and_finalize(task_id: str, file_id: str, contents: bytes, filena
         task.progress = 20
         db.commit()
 
-        # Parse raw bytes (runs in background threadpool)
-        logger.info("[BREADCRUMB] Parsing bytes for '%s'", filename)
-        rows = file_parser.parse_bytes_direct(contents, filename, validate_columns=True)
+        def update_progress(pct: int):
+            try:
+                task.progress = pct
+                db.commit()
+            except Exception:
+                pass
 
-        task.progress = 60
+        # Parse raw bytes (runs in background threadpool with per-page progress updates)
+        logger.info("[BREADCRUMB] Parsing bytes for '%s'", filename)
+        rows = file_parser.parse_bytes_direct(
+            contents, filename, validate_columns=True, progress_callback=update_progress
+        )
+
+        task.progress = 75
         db.commit()
 
         # Save parsed rows as JSON

@@ -123,8 +123,16 @@ async def parse_upload(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-def parse_bytes_direct(contents: bytes, filename: str, validate_columns: bool = True) -> list[dict]:
-    df = _parse_bytes(contents, filename, "")
+from collections.abc import Callable
+
+
+def parse_bytes_direct(
+    contents: bytes,
+    filename: str,
+    validate_columns: bool = True,
+    progress_callback: Callable[[int], None] | None = None,
+) -> list[dict]:
+    df = _parse_bytes(contents, filename, "", progress_callback=progress_callback)
     df.columns = df.columns.str.strip()
 
     if validate_columns:
@@ -162,7 +170,12 @@ def _has_minimum_signal(columns: set[str]) -> bool:
         or (columns & _PARAMETER_COLUMNS)
     )
 
-def _parse_bytes(data: bytes, filename: str, content_type: str) -> pd.DataFrame:
+def _parse_bytes(
+    data: bytes,
+    filename: str,
+    content_type: str,
+    progress_callback: Callable[[int], None] | None = None,
+) -> pd.DataFrame:
     try:
         if filename.endswith(".csv") or content_type in _CSV_TYPES:
             return pd.read_csv(io.StringIO(data.decode("utf-8")))
@@ -172,7 +185,7 @@ def _parse_bytes(data: bytes, filename: str, content_type: str) -> pd.DataFrame:
 
         if filename.endswith(".pdf") or content_type in _PDF_TYPES:
             from app.services.pdf_parser import parse_pdf_bytes
-            return parse_pdf_bytes(data, filename)
+            return parse_pdf_bytes(data, filename, progress_callback=progress_callback)
 
         if filename.endswith((".xls", ".xlsx")) or content_type in _EXCEL_TYPES:
             return pd.read_excel(io.BytesIO(data))

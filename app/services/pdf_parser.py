@@ -279,7 +279,13 @@ def extract_year_from_filename(filename: str) -> int:
     return 2023
 
 
-def _read_tables_with_pdfplumber(data: bytes) -> list[pd.DataFrame]:
+from collections.abc import Callable
+
+
+def _read_tables_with_pdfplumber(
+    data: bytes,
+    progress_callback: Callable[[int], None] | None = None,
+) -> list[pd.DataFrame]:
     """
     Extract tables from a PDF byte stream using pdfplumber (pure Python,
     no JVM/subprocess dependencies or deadlock risks).
@@ -288,10 +294,11 @@ def _read_tables_with_pdfplumber(data: bytes) -> list[pd.DataFrame]:
     dfs: list[pd.DataFrame] = []
     try:
         with pdfplumber.open(io.BytesIO(data)) as pdf:
-            logger.info("[BREADCRUMB] PDF opened with %d page(s)", len(pdf.pages))
+            total_pages = len(pdf.pages)
+            logger.info("[BREADCRUMB] PDF opened with %d page(s)", total_pages)
             for p_idx, page in enumerate(pdf.pages):
                 tables = page.extract_tables()
-                logger.info("[BREADCRUMB] Page %d/%d produced %d raw table(s)", p_idx + 1, len(pdf.pages), len(tables))
+                logger.info("[BREADCRUMB] Page %d/%d produced %d raw table(s)", p_idx + 1, total_pages, len(tables))
                 for t in tables:
                     if not t or len(t) == 0:
                         continue
@@ -301,13 +308,22 @@ def _read_tables_with_pdfplumber(data: bytes) -> list[pd.DataFrame]:
                         continue
                     df = pd.DataFrame(rows, columns=header, dtype=str)
                     dfs.append(df)
+
+                if progress_callback and total_pages > 0:
+                    pct = int(20 + ((p_idx + 1) / total_pages) * 55)
+                    progress_callback(pct)
+
     except Exception as exc:
         logger.exception("[BREADCRUMB] Error extracting tables with pdfplumber")
         raise HTTPException(status_code=400, detail="Error reading PDF file structure.") from exc
     return dfs
 
 
-def parse_pdf_bytes(data: bytes, filename: str) -> pd.DataFrame:
+def parse_pdf_bytes(
+    data: bytes,
+    filename: str,
+    progress_callback: Callable[[int], None] | None = None,
+) -> pd.DataFrame:
     """
     Extract all tables from a PDF byte stream, apply heuristics to map
     the varying headers into the standard format, clean lab-report
@@ -318,7 +334,7 @@ def parse_pdf_bytes(data: bytes, filename: str) -> pd.DataFrame:
     all_records = []
 
     try:
-        tables = _read_tables_with_pdfplumber(data)
+        tables = _read_tables_with_pdfplumber(data, progress_callback=progress_callback)
     except Exception as exc:
         logger.exception("Failed to parse PDF bytes using pdfplumber.")
         raise HTTPException(status_code=400, detail="Error reading PDF file structure.") from exc
