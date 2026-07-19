@@ -258,8 +258,8 @@ export default function DataView({ samples, setSamples, summary }) {
             setTaskProgress(0);
             addToast(`Parsing failed: ${sdata.error_message}`, 'error');
           } else {
-            // still pending or processing, poll again
-            setTimeout(checkStatus, 1500);
+            // still pending or processing, poll again faster for responsive progress bar
+            setTimeout(checkStatus, 400);
           }
         } catch (err) {
           setBusy(false);
@@ -268,7 +268,7 @@ export default function DataView({ samples, setSamples, summary }) {
         }
       };
       
-      setTimeout(checkStatus, 1500);
+      setTimeout(checkStatus, 400);
       
     } catch (err) {
       addToast(String(err), 'error')
@@ -482,12 +482,16 @@ export default function DataView({ samples, setSamples, summary }) {
                     {busy ? (
                       <span className="flex flex-col items-center gap-2 justify-center w-full">
                         <span className="flex items-center gap-2 justify-center">
-                          <span className="spinner" /> {taskProgress > 0 ? 'Parsing...' : 'Uploading...'}
+                          <span className="spinner" /> {
+                            taskProgress === 0 ? 'Uploading File...' :
+                            taskProgress < 60 ? 'Parsing & Cleaning Tables...' :
+                            taskProgress < 85 ? 'Extracting Parameters...' : 'Finalizing Data...'
+                          }
                         </span>
                         {taskProgress > 0 && (
                           <div className="w-full max-w-[200px] h-1.5 bg-gray-800 rounded-full overflow-hidden mt-2 border border-gray-700/50">
                             <div 
-                              className="h-full bg-primary-500 rounded-full transition-all duration-300 ease-out"
+                              className="h-full rounded-full transition-all duration-300 ease-out"
                               style={{ 
                                 width: `${taskProgress}%`,
                                 backgroundColor: 'var(--color-primary-400)'
@@ -496,7 +500,7 @@ export default function DataView({ samples, setSamples, summary }) {
                           </div>
                         )}
                         {taskProgress > 0 && (
-                          <span className="text-xs" style={{ color: 'var(--color-text-400)' }}>
+                          <span className="text-xs font-mono" style={{ color: 'var(--color-text-400)' }}>
                             {taskProgress}% complete
                           </span>
                         )}

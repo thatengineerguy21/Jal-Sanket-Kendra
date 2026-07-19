@@ -98,19 +98,22 @@ def _parse_save_and_finalize(task_id: str, file_id: str, contents: bytes, filena
             return
 
         task.status = "processing"
-        task.progress = 25
+        task.progress = 20
         db.commit()
 
         # Parse raw bytes (runs in background threadpool)
         logger.info("[BREADCRUMB] Parsing bytes for '%s'", filename)
         rows = file_parser.parse_bytes_direct(contents, filename, validate_columns=True)
 
-        task.progress = 75
+        task.progress = 60
         db.commit()
 
         # Save parsed rows as JSON
         filepath = os.path.join(UPLOAD_DIR, f"{file_id}.json")
         os.makedirs(UPLOAD_DIR, exist_ok=True)
+        task.progress = 85
+        db.commit()
+
         with open(filepath, "w") as f:
             json.dump(rows, f)
 
